@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, DollarSign, TrendingUp, TrendingDown, Calendar, FileText, X, Filter, AlertCircle, Wallet } from 'lucide-react';
+import { Plus, Search, DollarSign, TrendingUp, TrendingDown, Calendar, FileText, X, Filter, AlertCircle, Wallet, Download } from 'lucide-react';
+import { ExportService, ExportFormat } from '../../services/ExportService';
 import { supabase } from '../../lib/supabase';
 import { LaborRatesSettings } from './LaborRatesSettings';
 import { ReconciliationSession } from './ReconciliationSession';
@@ -261,6 +262,74 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
     } finally {
       setGlLoading(false);
     }
+  };
+
+  const exportGLReport = (format: ExportFormat) => {
+    const exportData = {
+      title: 'General Ledger Report',
+      dateRange: {
+        start: new Date(glStartDate),
+        end: new Date(glEndDate),
+      },
+      columns: [
+        { header: 'Date', key: 'date', width: 12 },
+        { header: 'Account', key: 'account', width: 30 },
+        { header: 'Description', key: 'description', width: 40 },
+        { header: 'Reference', key: 'reference', width: 15 },
+        { header: 'Debit', key: 'debit', width: 15 },
+        { header: 'Credit', key: 'credit', width: 15 },
+      ],
+      rows: glEntries.map((entry) => ({
+        date: new Date(entry.entry_date).toLocaleDateString(),
+        account: `${entry.chart_of_accounts?.account_code || ''} - ${entry.chart_of_accounts?.account_name || ''}`,
+        description: entry.description || '',
+        reference: entry.reference_type || '',
+        debit: entry.debit_amount > 0 ? `$${entry.debit_amount.toFixed(2)}` : '',
+        credit: entry.credit_amount > 0 ? `$${entry.credit_amount.toFixed(2)}` : '',
+      })),
+      summary: {
+        totalDebits: glEntries.reduce((sum, e) => sum + (e.debit_amount || 0), 0),
+        totalCredits: glEntries.reduce((sum, e) => sum + (e.credit_amount || 0), 0),
+      },
+    };
+
+    ExportService.export(exportData, format);
+  };
+
+  const exportARAPReport = (format: ExportFormat) => {
+    const exportData = {
+      title: 'Accounts Receivable Aging Report',
+      dateRange: {
+        start: new Date(),
+        end: new Date(),
+      },
+      columns: [
+        { header: 'Customer', key: 'customer', width: 30 },
+        { header: 'Invoice #', key: 'invoice', width: 15 },
+        { header: 'Issue Date', key: 'issueDate', width: 12 },
+        { header: 'Due Date', key: 'dueDate', width: 12 },
+        { header: 'Aging', key: 'aging', width: 12 },
+        { header: 'Balance Due', key: 'balanceDue', width: 15 },
+      ],
+      rows: arInvoices.map((invoice) => ({
+        customer: invoice.customer_name,
+        invoice: invoice.invoice_number,
+        issueDate: new Date(invoice.issue_date).toLocaleDateString(),
+        dueDate: new Date(invoice.due_date).toLocaleDateString(),
+        aging: getAgingBucketLabel(invoice.days_overdue),
+        balanceDue: `$${invoice.balance_due.toFixed(2)}`,
+      })),
+      summary: {
+        total: arSummary.total,
+        current: arSummary.current,
+        days_1_30: arSummary.days_1_30,
+        days_31_60: arSummary.days_31_60,
+        days_61_90: arSummary.days_61_90,
+        days_90_plus: arSummary.days_90_plus,
+      },
+    };
+
+    ExportService.export(exportData, format);
   };
 
   const loadARData = async () => {
@@ -1100,13 +1169,45 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
                 {selectedReport === 'pl-by-job' && 'Profit & Loss by Job'}
               </h2>
             </div>
-            <button
-              onClick={() => window.print()}
-              className="btn btn-primary flex items-center space-x-2"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Export PDF</span>
-            </button>
+            {selectedReport === 'ar-ap' ? (
+              <div className="relative group">
+                <button
+                  className="btn btn-primary flex items-center space-x-2"
+                  disabled={arInvoices.length === 0}
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export PDF</span>
+                </button>
+                <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                  <button
+                    onClick={() => exportARAPReport('pdf')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                  >
+                    Export as PDF
+                  </button>
+                  <button
+                    onClick={() => exportARAPReport('excel')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Export as Excel
+                  </button>
+                  <button
+                    onClick={() => exportARAPReport('csv')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
+                  >
+                    Export as CSV
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => window.print()}
+                className="btn btn-primary flex items-center space-x-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Export PDF</span>
+              </button>
+            )}
           </div>
 
           {selectedReport === 'balance-sheet' && (
@@ -1303,13 +1404,44 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
               <div className="card p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filters</h3>
-                  <button
-                    onClick={loadGLEntries}
-                    className="btn btn-primary flex items-center space-x-2"
-                  >
-                    <Filter className="w-4 h-4" />
-                    <span>Apply Filters</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={loadGLEntries}
+                      className="btn btn-primary flex items-center space-x-2"
+                    >
+                      <Filter className="w-4 h-4" />
+                      <span>Apply Filters</span>
+                    </button>
+                    <div className="relative group">
+                      <button
+                        className="btn btn-outline flex items-center space-x-2"
+                        disabled={glEntries.length === 0}
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Export</span>
+                      </button>
+                      <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                        <button
+                          onClick={() => exportGLReport('pdf')}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                        >
+                          Export as PDF
+                        </button>
+                        <button
+                          onClick={() => exportGLReport('excel')}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          Export as Excel
+                        </button>
+                        <button
+                          onClick={() => exportGLReport('csv')}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
+                        >
+                          Export as CSV
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
