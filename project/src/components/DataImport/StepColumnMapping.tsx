@@ -59,6 +59,47 @@ export function StepColumnMapping({
         { key: 'due_date', label: 'Due Date', required: false, description: 'Payment due date' },
         { key: 'description', label: 'Description', required: false, description: 'Invoice description' },
       ];
+    } else if (entityType === 'vendors') {
+      return [
+        { key: 'name', label: 'Vendor Name', required: true, description: 'Full company name' },
+        { key: 'vendor_code', label: 'Vendor Code', required: false, description: 'Unique vendor code/ID' },
+        { key: 'external_vendor_id', label: 'External ID', required: false, description: 'ID from source system' },
+        { key: 'email', label: 'Email', required: false, description: 'Primary email address' },
+        { key: 'phone', label: 'Phone', required: false, description: 'Primary phone number' },
+        { key: 'address', label: 'Street Address', required: false, description: 'Street address line' },
+        { key: 'city', label: 'City', required: false, description: 'City name' },
+        { key: 'state', label: 'State', required: false, description: 'State or province' },
+        { key: 'postal_code', label: 'ZIP/Postal Code', required: false, description: 'Postal code' },
+        { key: 'payment_terms', label: 'Payment Terms', required: false, description: 'Net 30, Net 60, etc.' },
+        { key: 'tax_id', label: 'Tax ID', required: false, description: 'Tax identification number' },
+        { key: 'notes', label: 'Notes', required: false, description: 'Additional notes' },
+      ];
+    } else if (entityType === 'items') {
+      return [
+        { key: 'name', label: 'Item Name', required: true, description: 'Part/item name' },
+        { key: 'sku', label: 'SKU', required: false, description: 'Stock keeping unit' },
+        { key: 'external_item_id', label: 'External ID', required: false, description: 'ID from source system' },
+        { key: 'description', label: 'Description', required: false, description: 'Item description' },
+        { key: 'category', label: 'Category', required: false, description: 'Item category' },
+        { key: 'unit_cost', label: 'Unit Cost', required: false, description: 'Cost per unit' },
+        { key: 'unit_price', label: 'Unit Price', required: false, description: 'Selling price per unit' },
+        { key: 'quantity_on_hand', label: 'Quantity on Hand', required: false, description: 'Current inventory quantity' },
+        { key: 'reorder_point', label: 'Reorder Point', required: false, description: 'Minimum stock level' },
+        { key: 'vendor_code', label: 'Vendor Code', required: false, description: 'Primary vendor code' },
+      ];
+    } else if (entityType === 'history') {
+      return [
+        { key: 'record_type', label: 'Record Type', required: true, description: 'invoice, payment, or ticket' },
+        { key: 'external_customer_id', label: 'Customer ID', required: true, description: 'Customer identifier' },
+        { key: 'document_number', label: 'Document Number', required: true, description: 'Invoice/payment/ticket number' },
+        { key: 'document_date', label: 'Document Date', required: true, description: 'Date of the record' },
+        { key: 'amount', label: 'Amount', required: false, description: 'Total amount' },
+        { key: 'description', label: 'Description', required: false, description: 'Description or notes' },
+        { key: 'status', label: 'Status', required: false, description: 'Record status' },
+        { key: 'external_id', label: 'External ID', required: false, description: 'ID from source system' },
+        { key: 'due_date', label: 'Due Date', required: false, description: 'Payment due date (invoices)' },
+        { key: 'payment_method', label: 'Payment Method', required: false, description: 'Check, ACH, etc. (payments)' },
+      ];
     }
     return [];
   };
@@ -156,7 +197,17 @@ export function StepColumnMapping({
         });
 
         // Insert into appropriate staging table
-        const tableName = entityType === 'customers' ? 'import_customers_staging' : 'import_ar_staging';
+        const tableNameMap: Record<string, string> = {
+          customers: 'import_customers_staging',
+          ar: 'import_ar_staging',
+          vendors: 'import_vendors_staging',
+          items: 'import_items_staging',
+          history: 'import_history_staging',
+        };
+        const tableName = tableNameMap[entityType];
+        if (!tableName) {
+          throw new Error(`Unknown entity type: ${entityType}`);
+        }
         const { data, error } = await supabase
           .from(tableName)
           .insert([mappedRow])

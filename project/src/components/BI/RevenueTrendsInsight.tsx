@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { TrendingUp, DollarSign, BarChart3, ArrowUp, ArrowDown } from 'lucide-react';
 import { BIPageLayout } from './BIPageLayout';
 import { DateRangeSelector } from './DateRangeSelector';
 import { useBIDateRange } from '../../hooks/useBIDateRange';
 import { supabase } from '../../lib/supabase';
+import { ExportData } from '../../services/ExportService';
 
 interface RevenueMetrics {
   currentRevenue: number;
@@ -70,6 +71,30 @@ export function RevenueTrendsInsight() {
     }
   };
 
+  const getExportData = useCallback((): ExportData => {
+    return {
+      title: 'Revenue Trends Report',
+      subtitle: 'Revenue analysis and period comparison',
+      dateRange: { start, end },
+      columns: [
+        { header: 'Metric', key: 'metric' },
+        { header: 'Value', key: 'value', format: 'currency' },
+      ],
+      rows: [
+        { metric: 'Current Period Revenue', value: metrics.currentRevenue },
+        { metric: 'Prior Period Revenue', value: metrics.priorRevenue },
+        { metric: 'Revenue Change', value: metrics.currentRevenue - metrics.priorRevenue },
+        { metric: 'Average Invoice Value', value: metrics.avgInvoiceValue },
+      ],
+      summary: {
+        current_period: `$${metrics.currentRevenue.toLocaleString()}`,
+        prior_period: `$${metrics.priorRevenue.toLocaleString()}`,
+        period_change: `${metrics.percentChange >= 0 ? '+' : ''}${metrics.percentChange.toFixed(1)}%`,
+        avg_invoice: `$${Math.round(metrics.avgInvoiceValue).toLocaleString()}`,
+      },
+    };
+  }, [metrics, start, end]);
+
   const statCards = [
     {
       title: 'Current Period Revenue',
@@ -116,7 +141,8 @@ export function RevenueTrendsInsight() {
     <BIPageLayout
       title="Revenue Trends"
       subtitle="Revenue analysis and period comparison"
-      exportEnabled={false}
+      exportEnabled={true}
+      getExportData={getExportData}
     >
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 

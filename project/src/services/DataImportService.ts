@@ -423,6 +423,123 @@ export class DataImportService {
   }
 
   /**
+   * Validate vendor staging row
+   */
+  static validateVendorRow(row: any): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    // Required: name
+    if (!row.name || row.name.trim() === '') {
+      errors.push({ field: 'name', message: 'Vendor name is required' });
+    }
+
+    // Validate email format if provided
+    if (row.email && row.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(row.email)) {
+        errors.push({ field: 'email', message: 'Invalid email format' });
+      }
+    }
+
+    // Validate phone format if provided (basic check)
+    if (row.phone && row.phone.trim() !== '') {
+      const phoneRegex = /^[\d\s()+-]+$/;
+      if (!phoneRegex.test(row.phone) || row.phone.replace(/\D/g, '').length < 10) {
+        errors.push({ field: 'phone', message: 'Invalid phone number' });
+      }
+    }
+
+    return errors;
+  }
+
+  /**
+   * Validate item staging row
+   */
+  static validateItemRow(row: any): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    // Required: name
+    if (!row.name || row.name.trim() === '') {
+      errors.push({ field: 'name', message: 'Item name is required' });
+    }
+
+    // Validate unit cost if provided
+    if (row.unit_cost !== undefined && row.unit_cost !== null && row.unit_cost !== '') {
+      const cost = parseFloat(row.unit_cost);
+      if (isNaN(cost)) {
+        errors.push({ field: 'unit_cost', message: 'Invalid unit cost format' });
+      } else if (cost < 0) {
+        errors.push({ field: 'unit_cost', message: 'Unit cost cannot be negative' });
+      }
+    }
+
+    // Validate unit price if provided
+    if (row.unit_price !== undefined && row.unit_price !== null && row.unit_price !== '') {
+      const price = parseFloat(row.unit_price);
+      if (isNaN(price)) {
+        errors.push({ field: 'unit_price', message: 'Invalid unit price format' });
+      } else if (price < 0) {
+        errors.push({ field: 'unit_price', message: 'Unit price cannot be negative' });
+      }
+    }
+
+    // Validate quantity if provided
+    if (row.quantity_on_hand !== undefined && row.quantity_on_hand !== null && row.quantity_on_hand !== '') {
+      const qty = parseInt(row.quantity_on_hand);
+      if (isNaN(qty)) {
+        errors.push({ field: 'quantity_on_hand', message: 'Invalid quantity format' });
+      } else if (qty < 0) {
+        errors.push({ field: 'quantity_on_hand', message: 'Quantity cannot be negative' });
+      }
+    }
+
+    return errors;
+  }
+
+  /**
+   * Validate history staging row
+   */
+  static validateHistoryRow(row: any): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    // Required: record_type
+    const validRecordTypes = ['invoice', 'payment', 'ticket'];
+    if (!row.record_type || !validRecordTypes.includes(row.record_type.toLowerCase())) {
+      errors.push({ field: 'record_type', message: 'Record type must be invoice, payment, or ticket' });
+    }
+
+    // Required: customer identifier
+    if (!row.external_customer_id || row.external_customer_id.trim() === '') {
+      errors.push({ field: 'external_customer_id', message: 'Customer ID is required' });
+    }
+
+    // Required: document number
+    if (!row.document_number || row.document_number.trim() === '') {
+      errors.push({ field: 'document_number', message: 'Document number is required' });
+    }
+
+    // Required: document date
+    if (!row.document_date) {
+      errors.push({ field: 'document_date', message: 'Document date is required' });
+    } else {
+      const date = new Date(row.document_date);
+      if (isNaN(date.getTime())) {
+        errors.push({ field: 'document_date', message: 'Invalid document date format' });
+      }
+    }
+
+    // Validate amount if provided
+    if (row.amount !== undefined && row.amount !== null && row.amount !== '') {
+      const amount = parseFloat(row.amount);
+      if (isNaN(amount)) {
+        errors.push({ field: 'amount', message: 'Invalid amount format' });
+      }
+    }
+
+    return errors;
+  }
+
+  /**
    * Check if row should be skipped (e.g., total rows, empty rows)
    */
   static shouldSkipRow(rawRow: any, entityType: ImportEntityType): boolean {
@@ -481,7 +598,17 @@ export class DataImportService {
    * Get staging rows for a batch
    */
   static async getStagingRows(batchId: string, entityType: ImportEntityType): Promise<any[]> {
-    const tableName = entityType === 'customers' ? 'import_customers_staging' : 'import_ar_staging';
+    const tableNameMap: Record<string, string> = {
+      customers: 'import_customers_staging',
+      ar: 'import_ar_staging',
+      vendors: 'import_vendors_staging',
+      items: 'import_items_staging',
+      history: 'import_history_staging',
+    };
+    const tableName = tableNameMap[entityType];
+    if (!tableName) {
+      throw new Error(`Unknown entity type: ${entityType}`);
+    }
 
     const { data, error } = await supabase
       .from(tableName)
@@ -527,7 +654,17 @@ export class DataImportService {
    * Get preview of valid staging rows for a batch
    */
   static async getBatchPreviewRows(batchId: string, entityType: ImportEntityType, limit: number = 50): Promise<any[]> {
-    const tableName = entityType === 'customers' ? 'import_customers_staging' : 'import_ar_staging';
+    const tableNameMap: Record<string, string> = {
+      customers: 'import_customers_staging',
+      ar: 'import_ar_staging',
+      vendors: 'import_vendors_staging',
+      items: 'import_items_staging',
+      history: 'import_history_staging',
+    };
+    const tableName = tableNameMap[entityType];
+    if (!tableName) {
+      throw new Error(`Unknown entity type: ${entityType}`);
+    }
 
     const { data, error } = await supabase
       .from(tableName)
@@ -545,7 +682,17 @@ export class DataImportService {
    * Get error rows for a batch
    */
   static async getBatchErrorRows(batchId: string, entityType: ImportEntityType, limit: number = 100): Promise<any[]> {
-    const tableName = entityType === 'customers' ? 'import_customers_staging' : 'import_ar_staging';
+    const tableNameMap: Record<string, string> = {
+      customers: 'import_customers_staging',
+      ar: 'import_ar_staging',
+      vendors: 'import_vendors_staging',
+      items: 'import_items_staging',
+      history: 'import_history_staging',
+    };
+    const tableName = tableNameMap[entityType];
+    if (!tableName) {
+      throw new Error(`Unknown entity type: ${entityType}`);
+    }
 
     const { data, error } = await supabase
       .from(tableName)

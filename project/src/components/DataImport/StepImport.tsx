@@ -48,6 +48,12 @@ export function StepImport({
         await importCustomers();
       } else if (entityType === 'ar') {
         await importAR();
+      } else if (entityType === 'vendors') {
+        await importVendors();
+      } else if (entityType === 'items') {
+        await importItems();
+      } else if (entityType === 'history') {
+        await importHistory();
       }
 
       await DataImportService.updateImportBatch(importBatch.id, {
@@ -344,6 +350,378 @@ export function StepImport({
       });
 
       // Update batch progress every 20 rows or on last row
+      if ((i + 1) % 20 === 0 || i === stagingRows!.length - 1) {
+        await DataImportService.updateBatchProgress(importBatch.id, {
+          committed_rows: created,
+        });
+      }
+    }
+
+    setSummary({ created, updated: 0, skipped, errors });
+  };
+
+  const importVendors = async () => {
+    const { data: stagingRows, error } = await supabase
+      .from('import_vendors_staging')
+      .select('*')
+      .eq('import_batch_id', importBatch.id)
+      .eq('validation_status', 'valid')
+      .order('row_number', { ascending: true });
+
+    if (error) throw error;
+
+    setProgress({ current: 0, total: stagingRows?.length || 0, status: 'processing', message: 'Importing vendors...' });
+
+    await DataImportService.updateBatchProgress(importBatch.id, {
+      phase: 'committing',
+    });
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (let i = 0; i < (stagingRows || []).length; i++) {
+      if (i % 10 === 0) {
+        const cancelRequested = await DataImportService.isCancelRequested(importBatch.id);
+        if (cancelRequested) {
+          throw new Error('Import cancelled by user');
+        }
+      }
+
+      const row = stagingRows![i];
+
+      try {
+        // Check for existing vendor by vendor_code or external_vendor_id
+        let existingVendor = null;
+
+        if (row.vendor_code) {
+          const { data } = await supabase
+            .from('vendors')
+            .select('id')
+            .eq('vendor_code', row.vendor_code)
+            .maybeSingle();
+          existingVendor = data;
+        }
+
+        if (!existingVendor && row.external_vendor_id) {
+          const { data } = await supabase
+            .from('vendors')
+            .select('id')
+            .eq('external_vendor_id', row.external_vendor_id)
+            .maybeSingle();
+          existingVendor = data;
+        }
+
+        if (existingVendor) {
+          await supabase
+            .from('vendors')
+            .update({
+              name: row.name,
+              email: row.email || '',
+              phone: row.phone || '',
+              address: row.address || '',
+              city: row.city || '',
+              state: row.state || '',
+              postal_code: row.postal_code || '',
+              payment_terms: row.payment_terms || '',
+              tax_id: row.tax_id || '',
+              notes: row.notes || '',
+            })
+            .eq('id', existingVendor.id);
+
+          await supabase
+            .from('import_vendors_staging')
+            .update({ imported_vendor_id: existingVendor.id })
+            .eq('id', row.id);
+
+          updated++;
+        } else {
+          const { data: newVendor, error: insertError } = await supabase
+            .from('vendors')
+            .insert([{
+              name: row.name,
+              vendor_code: row.vendor_code || null,
+              email: row.email || '',
+              phone: row.phone || '',
+              address: row.address || '',
+              city: row.city || '',
+              state: row.state || '',
+              postal_code: row.postal_code || '',
+              payment_terms: row.payment_terms || '',
+              tax_id: row.tax_id || '',
+              notes: row.notes || '',
+              external_vendor_id: row.external_vendor_id,
+              import_batch_id: importBatch.id,
+            }])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          await supabase
+            .from('import_vendors_staging')
+            .update({ imported_vendor_id: newVendor.id })
+            .eq('id', row.id);
+
+          created++;
+        }
+      } catch (error: any) {
+        console.error(`Error importing vendor row ${row.row_number}:`, error);
+        errors++;
+      }
+
+      setProgress({
+        current: i + 1,
+        total: stagingRows!.length,
+        status: 'processing',
+        message: `Importing vendors... ${i + 1} of ${stagingRows!.length}`,
+      });
+
+      if ((i + 1) % 20 === 0 || i === stagingRows!.length - 1) {
+        await DataImportService.updateBatchProgress(importBatch.id, {
+          committed_rows: created + updated,
+        });
+      }
+    }
+
+    setSummary({ created, updated, skipped, errors });
+  };
+
+  const importItems = async () => {
+    const { data: stagingRows, error } = await supabase
+      .from('import_items_staging')
+      .select('*')
+      .eq('import_batch_id', importBatch.id)
+      .eq('validation_status', 'valid')
+      .order('row_number', { ascending: true });
+
+    if (error) throw error;
+
+    setProgress({ current: 0, total: stagingRows?.length || 0, status: 'processing', message: 'Importing items...' });
+
+    await DataImportService.updateBatchProgress(importBatch.id, {
+      phase: 'committing',
+    });
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (let i = 0; i < (stagingRows || []).length; i++) {
+      if (i % 10 === 0) {
+        const cancelRequested = await DataImportService.isCancelRequested(importBatch.id);
+        if (cancelRequested) {
+          throw new Error('Import cancelled by user');
+        }
+      }
+
+      const row = stagingRows![i];
+
+      try {
+        // Check for existing part by SKU
+        let existingPart = null;
+
+        if (row.sku) {
+          const { data } = await supabase
+            .from('parts')
+            .select('id')
+            .eq('sku', row.sku)
+            .maybeSingle();
+          existingPart = data;
+        }
+
+        if (existingPart) {
+          await supabase
+            .from('parts')
+            .update({
+              name: row.name,
+              description: row.description || '',
+              category: row.category || '',
+              unit_cost: parseFloat(row.unit_cost) || 0,
+              unit_price: parseFloat(row.unit_price) || 0,
+              reorder_point: parseInt(row.reorder_point) || 0,
+            })
+            .eq('id', existingPart.id);
+
+          await supabase
+            .from('import_items_staging')
+            .update({ imported_part_id: existingPart.id })
+            .eq('id', row.id);
+
+          updated++;
+        } else {
+          const { data: newPart, error: insertError } = await supabase
+            .from('parts')
+            .insert([{
+              name: row.name,
+              sku: row.sku || null,
+              description: row.description || '',
+              category: row.category || '',
+              unit_cost: parseFloat(row.unit_cost) || 0,
+              unit_price: parseFloat(row.unit_price) || 0,
+              reorder_point: parseInt(row.reorder_point) || 0,
+              external_item_id: row.external_item_id,
+              import_batch_id: importBatch.id,
+            }])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          await supabase
+            .from('import_items_staging')
+            .update({ imported_part_id: newPart.id })
+            .eq('id', row.id);
+
+          created++;
+        }
+      } catch (error: any) {
+        console.error(`Error importing item row ${row.row_number}:`, error);
+        errors++;
+      }
+
+      setProgress({
+        current: i + 1,
+        total: stagingRows!.length,
+        status: 'processing',
+        message: `Importing items... ${i + 1} of ${stagingRows!.length}`,
+      });
+
+      if ((i + 1) % 20 === 0 || i === stagingRows!.length - 1) {
+        await DataImportService.updateBatchProgress(importBatch.id, {
+          committed_rows: created + updated,
+        });
+      }
+    }
+
+    setSummary({ created, updated, skipped, errors });
+  };
+
+  const importHistory = async () => {
+    const { data: stagingRows, error } = await supabase
+      .from('import_history_staging')
+      .select('*')
+      .eq('import_batch_id', importBatch.id)
+      .eq('validation_status', 'valid')
+      .order('row_number', { ascending: true });
+
+    if (error) throw error;
+
+    setProgress({ current: 0, total: stagingRows?.length || 0, status: 'processing', message: 'Importing historical data...' });
+
+    await DataImportService.updateBatchProgress(importBatch.id, {
+      phase: 'committing',
+    });
+
+    let created = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+
+    for (let i = 0; i < (stagingRows || []).length; i++) {
+      if (i % 10 === 0) {
+        const cancelRequested = await DataImportService.isCancelRequested(importBatch.id);
+        if (cancelRequested) {
+          throw new Error('Import cancelled by user');
+        }
+      }
+
+      const row = stagingRows![i];
+
+      try {
+        // Find customer
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('external_customer_id', row.external_customer_id)
+          .maybeSingle();
+
+        if (!customer) {
+          throw new Error(`Customer not found: ${row.external_customer_id}`);
+        }
+
+        const recordType = row.record_type.toLowerCase();
+
+        if (recordType === 'invoice') {
+          const { data: newInvoice, error: insertError } = await supabase
+            .from('invoices')
+            .insert([{
+              customer_id: customer.id,
+              invoice_number: row.document_number,
+              external_invoice_number: row.document_number,
+              invoice_date: row.document_date,
+              due_date: row.due_date || row.document_date,
+              subtotal: parseFloat(row.amount) || 0,
+              total_amount: parseFloat(row.amount) || 0,
+              balance_due: 0,
+              status: row.status || 'paid',
+              is_historical: true,
+              import_batch_id: importBatch.id,
+              created_by: userId,
+            }])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          await supabase
+            .from('import_history_staging')
+            .update({
+              matched_customer_id: customer.id,
+              imported_invoice_id: newInvoice.id,
+            })
+            .eq('id', row.id);
+
+          created++;
+        } else if (recordType === 'ticket') {
+          const { data: newTicket, error: insertError } = await supabase
+            .from('tickets')
+            .insert([{
+              customer_id: customer.id,
+              title: row.description || 'Historical Service',
+              description: row.description || '',
+              status: row.status || 'completed',
+              priority: row.priority || 'medium',
+              ticket_type: row.ticket_type || 'service',
+              created_at: row.document_date,
+              completed_date: row.completed_date || row.document_date,
+              is_historical: true,
+              import_batch_id: importBatch.id,
+            }])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          await supabase
+            .from('import_history_staging')
+            .update({
+              matched_customer_id: customer.id,
+              imported_ticket_id: newTicket.id,
+            })
+            .eq('id', row.id);
+
+          created++;
+        } else if (recordType === 'payment') {
+          // Payments need to be linked to invoices - skip if no matching invoice
+          skipped++;
+        }
+      } catch (error: any) {
+        console.error(`Error importing history row ${row.row_number}:`, error);
+        errors++;
+      }
+
+      setProgress({
+        current: i + 1,
+        total: stagingRows!.length,
+        status: 'processing',
+        message: `Importing historical data... ${i + 1} of ${stagingRows!.length}`,
+      });
+
       if ((i + 1) % 20 === 0 || i === stagingRows!.length - 1) {
         await DataImportService.updateBatchProgress(importBatch.id, {
           committed_rows: created,

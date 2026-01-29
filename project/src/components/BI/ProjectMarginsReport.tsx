@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
 import { BIPageLayout } from './BIPageLayout';
 import { DateRangeSelector } from './DateRangeSelector';
 import { useBIDateRange } from '../../hooks/useBIDateRange';
 import { supabase } from '../../lib/supabase';
+import { ExportData } from '../../services/ExportService';
 
 interface ProjectMargin {
   id: string;
@@ -92,6 +93,34 @@ export function ProjectMarginsReport() {
     }
   };
 
+  const getExportData = useCallback((): ExportData => {
+    return {
+      title: 'Project Margins Report',
+      subtitle: 'Profitability analysis by project',
+      dateRange: { start, end },
+      columns: [
+        { header: 'Project', key: 'name' },
+        { header: 'Revenue', key: 'revenue', format: 'currency' },
+        { header: 'Costs', key: 'costs', format: 'currency' },
+        { header: 'Gross Profit', key: 'profit', format: 'currency' },
+        { header: 'Margin %', key: 'margin', format: 'percent' },
+      ],
+      rows: metrics.projects.map((project) => ({
+        name: project.name,
+        revenue: project.revenue,
+        costs: project.costs,
+        profit: project.profit,
+        margin: project.margin / 100,
+      })),
+      summary: {
+        avg_margin: `${metrics.avgMargin.toFixed(1)}%`,
+        highest_margin: `${metrics.highestMargin.toFixed(1)}% (${metrics.highestMarginProject})`,
+        lowest_margin: `${metrics.lowestMargin.toFixed(1)}% (${metrics.lowestMarginProject})`,
+        total_projects: metrics.projects.length,
+      },
+    };
+  }, [metrics, start, end]);
+
   const statCards = [
     {
       title: 'Avg Margin',
@@ -137,7 +166,8 @@ export function ProjectMarginsReport() {
     <BIPageLayout
       title="Project Margins"
       subtitle="Profitability analysis by project"
-      exportEnabled={false}
+      exportEnabled={true}
+      getExportData={getExportData}
     >
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 

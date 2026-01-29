@@ -10,6 +10,7 @@ import {
   AlertCircle,
   CheckCircle,
   Upload,
+  Plus,
 } from 'lucide-react';
 import {
   ReconciliationService,
@@ -19,6 +20,9 @@ import {
   ReconciliationAdjustment,
   AdjustmentType,
 } from '../../services/ReconciliationService';
+import { BankStatementImport } from './BankStatementImport';
+import { TransactionMatcher } from './TransactionMatcher';
+import { AdjustmentForm } from './AdjustmentForm';
 
 interface ReconciliationSessionProps {
   reconciliationId: string;
@@ -520,75 +524,166 @@ function GLEntriesTab({
   );
 }
 
-// Bank Statement Tab Component (placeholder for now)
+// Bank Statement Tab Component
 function BankStatementTab({
   reconciliationId,
   bankLines,
+  glEntries,
   onRefresh,
   readOnly,
 }: {
   reconciliationId: string;
   bankLines: BankStatementLine[];
+  glEntries: GLEntryForReconciliation[];
   onRefresh: () => void;
   readOnly: boolean;
 }) {
+  const [showImport, setShowImport] = useState(false);
+  const [activeView, setActiveView] = useState<'list' | 'match'>('list');
+
+  const handleImportComplete = () => {
+    setShowImport(false);
+    onRefresh();
+  };
+
   return (
     <div className="space-y-4">
-      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-        <p className="text-sm text-yellow-800 dark:text-yellow-200">
-          <strong>Coming Soon:</strong> Bank statement import and matching functionality will be
-          available in a future update. For now, manually check GL entries that appear on your
-          statement.
-        </p>
-      </div>
-
-      {bankLines.length > 0 && (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {bankLines.map((line) => (
-                <tr key={line.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white whitespace-nowrap">
-                    {new Date(line.transaction_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {line.description}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right text-gray-900 dark:text-white whitespace-nowrap">
-                    ${line.amount.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                      {line.match_status.replace('_', ' ')}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Action Bar */}
+      {!readOnly && (
+        <div className="flex items-center justify-between">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setActiveView('list')}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                activeView === 'list'
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+              }`}
+            >
+              Statement Lines
+            </button>
+            <button
+              onClick={() => setActiveView('match')}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                activeView === 'match'
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+              }`}
+            >
+              Match Transactions
+            </button>
+          </div>
+          <button
+            onClick={() => setShowImport(!showImport)}
+            className="btn btn-outline flex items-center space-x-2"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Import Statement</span>
+          </button>
         </div>
+      )}
+
+      {/* Import Section */}
+      {showImport && !readOnly && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <BankStatementImport
+            reconciliationId={reconciliationId}
+            onImportComplete={handleImportComplete}
+            onCancel={() => setShowImport(false)}
+          />
+        </div>
+      )}
+
+      {/* Main Content */}
+      {activeView === 'list' && (
+        <>
+          {bankLines.length === 0 ? (
+            <div className="text-center py-12">
+              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No Bank Statement Loaded
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Import your bank statement to compare against GL entries.
+              </p>
+              {!readOnly && (
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="btn btn-primary"
+                >
+                  Import Bank Statement
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {bankLines.map((line) => (
+                    <tr key={line.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                        {new Date(line.transaction_date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                        {line.description}
+                      </td>
+                      <td
+                        className={`px-6 py-4 text-sm text-right whitespace-nowrap font-medium ${
+                          line.amount < 0 ? 'text-red-600' : 'text-green-600'
+                        }`}
+                      >
+                        ${Math.abs(line.amount).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded ${
+                            line.match_status === 'matched'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}
+                        >
+                          {line.match_status.replace('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeView === 'match' && (
+        <TransactionMatcher
+          reconciliationId={reconciliationId}
+          bankLines={bankLines}
+          glEntries={glEntries}
+          onRefresh={onRefresh}
+          readOnly={readOnly}
+        />
       )}
     </div>
   );
 }
 
-// Adjustments Tab Component (placeholder for now)
+// Adjustments Tab Component
 function AdjustmentsTab({
   reconciliationId,
   accountId,
@@ -602,6 +697,13 @@ function AdjustmentsTab({
   onRefresh: () => void;
   readOnly: boolean;
 }) {
+  const [showForm, setShowForm] = useState(false);
+
+  const handleAdjustmentCreated = () => {
+    setShowForm(false);
+    onRefresh();
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -611,12 +713,24 @@ function AdjustmentsTab({
         </p>
       </div>
 
-      {!readOnly && (
-        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            <strong>Coming Soon:</strong> Quick adjustment creation interface will be available in a
-            future update. For now, create journal entries through the main GL interface.
-          </p>
+      {!readOnly && !showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="btn btn-outline flex items-center space-x-2"
+        >
+          <Plus className="w-4 h-4" />
+          <span>New Adjustment</span>
+        </button>
+      )}
+
+      {showForm && !readOnly && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <AdjustmentForm
+            reconciliationId={reconciliationId}
+            accountId={accountId}
+            onAdjustmentCreated={handleAdjustmentCreated}
+            onCancel={() => setShowForm(false)}
+          />
         </div>
       )}
 
@@ -658,6 +772,16 @@ function AdjustmentsTab({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {adjustments.length === 0 && !showForm && (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>No adjustments yet</p>
+          {!readOnly && (
+            <p className="text-sm mt-2">Click "New Adjustment" to add bank fees, interest, or corrections</p>
+          )}
         </div>
       )}
     </div>

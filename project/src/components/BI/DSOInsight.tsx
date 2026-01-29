@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Clock, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
 import { BIPageLayout } from './BIPageLayout';
 import { DateRangeSelector } from './DateRangeSelector';
 import { useBIDateRange } from '../../hooks/useBIDateRange';
 import { supabase } from '../../lib/supabase';
+import { ExportData } from '../../services/ExportService';
 
 interface AgingBucket {
   label: string;
@@ -108,6 +109,32 @@ export function DSOInsight() {
     }
   };
 
+  const getExportData = useCallback((): ExportData => {
+    return {
+      title: 'Days Sales Outstanding (DSO) Report',
+      subtitle: 'Cash collection efficiency analysis',
+      dateRange: { start, end },
+      columns: [
+        { header: 'Aging Bucket', key: 'label' },
+        { header: 'Invoice Count', key: 'count', format: 'number' },
+        { header: 'Amount', key: 'amount', format: 'currency' },
+        { header: '% of Total', key: 'percentage', format: 'percent' },
+      ],
+      rows: metrics.agingBuckets.map((bucket) => ({
+        label: bucket.label,
+        count: bucket.count,
+        amount: bucket.amount,
+        percentage: metrics.totalAR > 0 ? bucket.amount / metrics.totalAR : 0,
+      })),
+      summary: {
+        dso: `${Math.round(metrics.dso)} days`,
+        total_ar: `$${metrics.totalAR.toLocaleString()}`,
+        avg_daily_sales: `$${Math.round(metrics.avgDailySales).toLocaleString()}`,
+        dso_target: '30 days',
+      },
+    };
+  }, [metrics, start, end]);
+
   const statCards = [
     {
       title: 'Days Sales Outstanding',
@@ -153,7 +180,8 @@ export function DSOInsight() {
     <BIPageLayout
       title="Days Sales Outstanding (DSO)"
       subtitle="Cash collection efficiency analysis"
-      exportEnabled={false}
+      exportEnabled={true}
+      getExportData={getExportData}
     >
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 

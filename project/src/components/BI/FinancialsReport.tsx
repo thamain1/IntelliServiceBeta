@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DollarSign, TrendingUp, AlertCircle, Clock, BarChart3 } from 'lucide-react';
 import { BIPageLayout } from './BIPageLayout';
 import { DateRangeSelector } from './DateRangeSelector';
 import { useBIDateRange } from '../../hooks/useBIDateRange';
 import { supabase } from '../../lib/supabase';
+import { ExportData } from '../../services/ExportService';
 
 interface FinancialsMetrics {
   totalRevenue: number;
@@ -69,6 +70,28 @@ export function FinancialsReport() {
     }
   };
 
+  const getExportData = useCallback((): ExportData => {
+    return {
+      title: 'Financial Report',
+      subtitle: 'Revenue, payments, and outstanding balances',
+      dateRange: { start, end },
+      columns: [
+        { header: 'Metric', key: 'metric' },
+        { header: 'Amount', key: 'amount', format: 'currency' },
+      ],
+      rows: [
+        { metric: 'Total Revenue', amount: metrics.totalRevenue },
+        { metric: 'Paid Amount', amount: metrics.paidAmount },
+        { metric: 'Outstanding Amount', amount: metrics.outstandingAmount },
+        { metric: 'Overdue Amount', amount: metrics.overdueAmount },
+      ],
+      summary: {
+        total_invoices: `${metrics.overdueCount} overdue invoices`,
+        period: dateRange,
+      },
+    };
+  }, [metrics, start, end, dateRange]);
+
   const statCards = [
     {
       title: 'Total Revenue',
@@ -113,7 +136,8 @@ export function FinancialsReport() {
     <BIPageLayout
       title="Financial Report"
       subtitle="Revenue, payments, and outstanding balances"
-      exportEnabled={false}
+      exportEnabled={true}
+      getExportData={getExportData}
     >
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 

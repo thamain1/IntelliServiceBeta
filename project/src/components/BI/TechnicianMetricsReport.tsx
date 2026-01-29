@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Users, Wrench, Clock, DollarSign, BarChart3 } from 'lucide-react';
 import { BIPageLayout } from './BIPageLayout';
 import { DateRangeSelector } from './DateRangeSelector';
 import { useBIDateRange } from '../../hooks/useBIDateRange';
 import { supabase } from '../../lib/supabase';
+import { ExportData } from '../../services/ExportService';
 
 interface TechMetrics {
   totalTickets: number;
@@ -89,6 +90,32 @@ export function TechnicianMetricsReport() {
     }
   };
 
+  const getExportData = useCallback((): ExportData => {
+    return {
+      title: 'Technician Metrics Report',
+      subtitle: 'Performance and productivity by technician',
+      dateRange: { start, end },
+      columns: [
+        { header: 'Technician', key: 'name' },
+        { header: 'Tickets', key: 'tickets', format: 'number' },
+        { header: 'Hours', key: 'hours', format: 'number' },
+        { header: 'Revenue', key: 'revenue', format: 'currency' },
+      ],
+      rows: metrics.techPerformance.map((tech) => ({
+        name: tech.name,
+        tickets: tech.tickets,
+        hours: tech.hours,
+        revenue: tech.revenue,
+      })),
+      summary: {
+        total_tickets: metrics.totalTickets,
+        avg_onsite_hours: `${metrics.avgOnsiteHours.toFixed(1)} hrs`,
+        first_time_fix_rate: `${metrics.firstTimeFix}%`,
+        revenue_per_tech: `$${Math.round(metrics.revenuePerTech).toLocaleString()}`,
+      },
+    };
+  }, [metrics, start, end]);
+
   const statCards = [
     {
       title: 'Total Tickets',
@@ -133,7 +160,8 @@ export function TechnicianMetricsReport() {
     <BIPageLayout
       title="Technician Metrics"
       subtitle="Performance and productivity by technician"
-      exportEnabled={false}
+      exportEnabled={true}
+      getExportData={getExportData}
     >
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 

@@ -6,6 +6,8 @@ import { ReconciliationSession } from './ReconciliationSession';
 import { ReconciliationService, BankReconciliation as ServiceReconciliation } from '../../services/ReconciliationService';
 import { CashFlowReportView } from './CashFlowReportView';
 import { JobPLReportView } from './JobPLReportView';
+import { BillsView, NewBillModal, BillDetailModal, RecordPaymentModal, APAgingReport } from '../AP';
+import { APService, Bill, APSummary } from '../../services/APService';
 
 // Note: gl_accounts, journal_entries, and journal_entry_lines are database views, not tables
 type GLAccount = {
@@ -139,6 +141,16 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
   const [selectedAccountForRecon, setSelectedAccountForRecon] = useState<GLAccount | null>(null);
   const [activeReconciliationId, setActiveReconciliationId] = useState<string | null>(null);
 
+  // AP state
+  const [apSummary, setApSummary] = useState<APSummary | null>(null);
+  const [apLoading, setApLoading] = useState(false);
+  const [showNewBillModal, setShowNewBillModal] = useState(false);
+  const [showBillDetailModal, setShowBillDetailModal] = useState(false);
+  const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [selectedVendorIdForPayment, setSelectedVendorIdForPayment] = useState<string | undefined>();
+  const [selectedBillIdForPayment, setSelectedBillIdForPayment] = useState<string | undefined>();
+
   const [accountFormData, setAccountFormData] = useState({
     account_number: '',
     account_name: '',
@@ -177,6 +189,7 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
         setActiveTab('reports');
         setSelectedReport('ar-ap');
         loadARData();
+        loadAPData();
         break;
       case 'chart-of-accounts':
         setActiveTab('accounts');
@@ -314,6 +327,48 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
     } finally {
       setArLoading(false);
     }
+  };
+
+  const loadAPData = async () => {
+    setApLoading(true);
+    try {
+      const summary = await APService.getAPSummary();
+      setApSummary(summary);
+    } catch (error) {
+      console.error('Error loading AP data:', error);
+    } finally {
+      setApLoading(false);
+    }
+  };
+
+  const handleViewBill = (bill: Bill) => {
+    setSelectedBill(bill);
+    setShowBillDetailModal(true);
+  };
+
+  const handleRecordPayment = (vendorId?: string, billId?: string) => {
+    if (billId) {
+      // If opening from a specific bill, get vendor from bill
+      APService.getBillById(billId).then((bill) => {
+        if (bill) {
+          setSelectedVendorIdForPayment(bill.vendor_id);
+          setSelectedBillIdForPayment(billId);
+          setShowRecordPaymentModal(true);
+        }
+      });
+    } else {
+      setSelectedVendorIdForPayment(vendorId);
+      setSelectedBillIdForPayment(undefined);
+      setShowRecordPaymentModal(true);
+    }
+  };
+
+  const handleAPDataRefresh = () => {
+    loadAPData();
+    setShowNewBillModal(false);
+    setShowBillDetailModal(false);
+    setShowRecordPaymentModal(false);
+    setSelectedBill(null);
   };
 
   const loadReconciliationsData = async () => {
@@ -994,7 +1049,7 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
           </div>
 
           <div
-            onClick={() => setSelectedReport('ar-ap')}
+            onClick={() => { setSelectedReport('ar-ap'); loadARData(); loadAPData(); }}
             className="card p-6 hover:shadow-lg transition-shadow cursor-pointer"
           >
             <div className="flex items-center space-x-4">
@@ -1514,15 +1569,90 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
               </div>
 
               <div className="card p-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Accounts Payable</h3>
-                <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
-                  <div className="text-center">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p className="font-medium">AP tracking coming soon</p>
-                    <p className="text-sm">Currently tracking vendor bills in procurement module</p>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Accounts Payable</h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setShowNewBillModal(true)}
+                      className="btn btn-primary btn-sm"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      New Bill
+                    </button>
+                    <button
+                      onClick={() => handleRecordPayment()}
+                      className="btn btn-outline btn-sm"
+                    >
+                      <DollarSign className="w-4 h-4 mr-1" />
+                      Record Payment
+                    </button>
                   </div>
                 </div>
+
+                {/* AP Summary Cards */}
+                {apSummary && (
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Total Outstanding</p>
+                      <p className="text-xl font-bold text-gray-900 dark:text-white">
+                        {formatCurrency(apSummary.total_outstanding)}
+                      </p>
+                      <p className="text-xs text-gray-500">{apSummary.bills_count} open bills</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                      <p className="text-sm text-red-600 dark:text-red-400">Overdue</p>
+                      <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                        {formatCurrency(apSummary.total_overdue)}
+                      </p>
+                      <p className="text-xs text-red-500">{apSummary.overdue_count} overdue</p>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                      <p className="text-sm text-yellow-600 dark:text-yellow-400">Due This Week</p>
+                      <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+                        {formatCurrency(apSummary.due_this_week)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* AP Aging Report */}
+                <APAgingReport
+                  onViewVendorBills={(vendorId) => {
+                    // Could filter bills by vendor here
+                    console.log('View bills for vendor:', vendorId);
+                  }}
+                />
               </div>
+
+              {/* AP Modals */}
+              <NewBillModal
+                isOpen={showNewBillModal}
+                onClose={() => setShowNewBillModal(false)}
+                onBillCreated={handleAPDataRefresh}
+              />
+
+              <BillDetailModal
+                isOpen={showBillDetailModal}
+                bill={selectedBill}
+                onClose={() => {
+                  setShowBillDetailModal(false);
+                  setSelectedBill(null);
+                }}
+                onBillUpdated={handleAPDataRefresh}
+                onRecordPayment={(billId) => handleRecordPayment(undefined, billId)}
+              />
+
+              <RecordPaymentModal
+                isOpen={showRecordPaymentModal}
+                onClose={() => {
+                  setShowRecordPaymentModal(false);
+                  setSelectedVendorIdForPayment(undefined);
+                  setSelectedBillIdForPayment(undefined);
+                }}
+                onPaymentRecorded={handleAPDataRefresh}
+                preselectedVendorId={selectedVendorIdForPayment}
+                preselectedBillId={selectedBillIdForPayment}
+              />
             </div>
           )}
 

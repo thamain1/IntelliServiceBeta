@@ -43,7 +43,17 @@ export function StepValidation({
     setValidating(true);
 
     try {
-      const tableName = entityType === 'customers' ? 'import_customers_staging' : 'import_ar_staging';
+      const tableNameMap: Record<string, string> = {
+        customers: 'import_customers_staging',
+        ar: 'import_ar_staging',
+        vendors: 'import_vendors_staging',
+        items: 'import_items_staging',
+        history: 'import_history_staging',
+      };
+      const tableName = tableNameMap[entityType];
+      if (!tableName) {
+        throw new Error(`Unknown entity type: ${entityType}`);
+      }
 
       // Load all staging rows
       const { data: stagingRows, error } = await supabase
@@ -85,6 +95,12 @@ export function StepValidation({
           validationErrors = DataImportService.validateCustomerRow(row as any);
         } else if (entityType === 'ar') {
           validationErrors = DataImportService.validateARRow(row as any);
+        } else if (entityType === 'vendors') {
+          validationErrors = DataImportService.validateVendorRow(row as any);
+        } else if (entityType === 'items') {
+          validationErrors = DataImportService.validateItemRow(row as any);
+        } else if (entityType === 'history') {
+          validationErrors = DataImportService.validateHistoryRow(row as any);
         } else {
           validationErrors = [];
         }
@@ -332,6 +348,39 @@ export function StepValidation({
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                       Invoices will be marked as "migrated opening balance" and will appear in your AR aging. GL entries can be created to record the opening AR balance.
+                    </p>
+                  </>
+                )}
+                {entityType === 'vendors' && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">New Vendors</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{stats.valid}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Vendors will be created with their contact and payment information. Duplicate checking will occur based on vendor code or name match.
+                    </p>
+                  </>
+                )}
+                {entityType === 'items' && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">New Parts/Items</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{stats.valid}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Parts will be created with pricing and inventory information. SKU uniqueness will be validated.
+                    </p>
+                  </>
+                )}
+                {entityType === 'history' && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Historical Records</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{stats.valid}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Invoices, payments, and tickets will be imported as historical records. Customers must be imported first.
                     </p>
                   </>
                 )}

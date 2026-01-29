@@ -30,21 +30,21 @@ export function StepSelectType({ selectedType: initialType, onNext }: StepSelect
       icon: Package,
       title: 'Vendors',
       description: 'Import vendor master data for procurement management',
-      available: false,
+      available: true,
     },
     {
       id: 'items' as ImportEntityType,
       icon: FileText,
       title: 'Items / Parts',
       description: 'Import parts inventory and pricing from previous system',
-      available: false,
+      available: true,
     },
     {
       id: 'history' as ImportEntityType,
       icon: Clock,
       title: 'Historical Data',
       description: 'Import past invoices, payments, and service history (12-24 months)',
-      available: false,
+      available: true,
     },
   ];
 

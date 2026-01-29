@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Users, DollarSign, TrendingUp, Calendar } from 'lucide-react';
 import { BIPageLayout } from './BIPageLayout';
 import { DateRangeSelector } from './DateRangeSelector';
 import { useBIDateRange } from '../../hooks/useBIDateRange';
 import { supabase } from '../../lib/supabase';
+import { ExportData } from '../../services/ExportService';
 
 interface CustomerData {
   id: string;
@@ -101,6 +102,32 @@ export function CustomerValueInsight() {
     }
   };
 
+  const getExportData = useCallback((): ExportData => {
+    return {
+      title: 'Customer Value Analysis Report',
+      subtitle: 'Lifetime value and customer insights',
+      dateRange: { start, end: new Date() },
+      columns: [
+        { header: 'Customer', key: 'name' },
+        { header: 'Lifetime Revenue', key: 'lifetimeRevenue', format: 'currency' },
+        { header: 'Last Service', key: 'lastServiceDate', format: 'date' },
+        { header: 'Open AR', key: 'openAR', format: 'currency' },
+      ],
+      rows: metrics.customers.map((customer) => ({
+        name: customer.name,
+        lifetimeRevenue: customer.lifetimeRevenue,
+        lastServiceDate: customer.lastServiceDate,
+        openAR: customer.openAR,
+      })),
+      summary: {
+        top_customer: `${metrics.topCustomerName} ($${metrics.topCustomerRevenue.toLocaleString()})`,
+        avg_revenue_per_customer: `$${Math.round(metrics.avgRevenuePerCustomer).toLocaleString()}`,
+        total_customers: metrics.totalCustomers,
+        period: dateRange,
+      },
+    };
+  }, [metrics, start, dateRange]);
+
   const statCards = [
     {
       title: 'Top Customer',
@@ -145,7 +172,8 @@ export function CustomerValueInsight() {
     <BIPageLayout
       title="Customer Value Analysis"
       subtitle="Lifetime value and customer insights"
-      exportEnabled={false}
+      exportEnabled={true}
+      getExportData={getExportData}
     >
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 

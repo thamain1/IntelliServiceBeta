@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Clock, DollarSign, TrendingUp, Users, BarChart3 } from 'lucide-react';
 import { BIPageLayout } from './BIPageLayout';
 import { DateRangeSelector } from './DateRangeSelector';
 import { useBIDateRange } from '../../hooks/useBIDateRange';
 import { supabase } from '../../lib/supabase';
+import { ExportData } from '../../services/ExportService';
 
 interface LaborMetrics {
   billableHours: number;
@@ -116,6 +117,32 @@ export function LaborEfficiencyInsight() {
     }
   };
 
+  const getExportData = useCallback((): ExportData => {
+    return {
+      title: 'Labor Efficiency Report',
+      subtitle: 'Productivity and billable utilization analysis',
+      dateRange: { start, end },
+      columns: [
+        { header: 'Technician', key: 'name' },
+        { header: 'Billable Hours', key: 'billable', format: 'number' },
+        { header: 'Non-Billable Hours', key: 'nonBillable', format: 'number' },
+        { header: 'Utilization %', key: 'utilization', format: 'percent' },
+      ],
+      rows: metrics.techBreakdown.map((tech) => ({
+        name: tech.name,
+        billable: tech.billable,
+        nonBillable: tech.nonBillable,
+        utilization: tech.utilization / 100,
+      })),
+      summary: {
+        total_billable_hours: `${Math.round(metrics.billableHours)} hrs`,
+        total_non_billable_hours: `${Math.round(metrics.nonBillableHours)} hrs`,
+        overall_utilization: `${metrics.utilizationPercent.toFixed(1)}%`,
+        labor_revenue: `$${Math.round(metrics.laborBilled).toLocaleString()}`,
+      },
+    };
+  }, [metrics, start, end]);
+
   const statCards = [
     {
       title: 'Billable Hours',
@@ -161,7 +188,8 @@ export function LaborEfficiencyInsight() {
     <BIPageLayout
       title="Labor Efficiency"
       subtitle="Productivity and billable utilization analysis"
-      exportEnabled={false}
+      exportEnabled={true}
+      getExportData={getExportData}
     >
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 
