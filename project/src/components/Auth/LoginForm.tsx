@@ -140,25 +140,9 @@ export function LoginForm() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError('');
-                setSuccess('');
-              }}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
-          </div>
-
-          {!isSignUp && (
-            <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-              Create your first account by clicking "Sign up" above
-            </p>
-          )}
+          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            Powered By <span className="font-semibold">4wardmotion Solutions</span>
+          </p>
         </div>
       </div>
     </div>
