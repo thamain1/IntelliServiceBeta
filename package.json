@@ -1,0 +1,11 @@
+{
+  "name": "dunaway-erp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd project && npm run dev",
+    "build": "cd project && npm run build",
+    "preview": "cd project && npm run preview",
+    "install-deps": "cd project && npm install"
+  }
+}
