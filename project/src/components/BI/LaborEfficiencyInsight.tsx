@@ -43,12 +43,17 @@ export function LaborEfficiencyInsight() {
 
       // Use correct column names: clock_in_time, clock_out_time
       // Time logged with a ticket_id is considered billable
-      const { data: timeLogs } = await supabase
+      const { data: timeLogs, error } = await supabase
         .from('time_logs')
-        .select('*, profiles(full_name), tickets(title)')
+        .select('*, profiles!time_logs_user_id_fkey(full_name), tickets(title)')
         .gte('clock_in_time', start.toISOString())
         .lte('clock_in_time', end.toISOString())
         .eq('status', 'completed');
+
+      if (error) {
+        console.error('Error fetching time logs:', error);
+        throw error;
+      }
 
       let billableHours = 0;
       let nonBillableHours = 0;
