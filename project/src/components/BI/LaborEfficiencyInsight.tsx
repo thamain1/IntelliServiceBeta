@@ -56,6 +56,20 @@ export function LaborEfficiencyInsight() {
         throw error;
       }
 
+      // Debug: Log what we received
+      console.log('[LaborEfficiency] Total logs received:', timeLogs?.length);
+      console.log('[LaborEfficiency] Date range:', start.toISOString(), 'to', end.toISOString());
+
+      // Debug: Count logs with/without clock_out_time
+      const withClockOut = timeLogs?.filter((l: any) => l.clock_out_time) || [];
+      const withoutClockOut = timeLogs?.filter((l: any) => !l.clock_out_time) || [];
+      console.log('[LaborEfficiency] Logs WITH clock_out_time:', withClockOut.length);
+      console.log('[LaborEfficiency] Logs WITHOUT clock_out_time:', withoutClockOut.length);
+
+      // Debug: Show unique users in the data
+      const uniqueUsers = [...new Set(timeLogs?.map((l: any) => l.profiles?.full_name || 'NULL PROFILE'))];
+      console.log('[LaborEfficiency] Unique users in data:', uniqueUsers);
+
       let billableHours = 0;
       let nonBillableHours = 0;
       let laborCost = 0;

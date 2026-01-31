@@ -1,0 +1,101 @@
+table_name,column_name,data_type,custom_type,is_nullable,column_default,constraint_type,foreign_table,foreign_column
+accounting_settings,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+accounting_settings,setting_key,text,text,NO,null,UNIQUE,null,null
+accounting_settings,setting_value,text,text,NO,null,null,null,null
+accounting_settings,setting_type,USER-DEFINED,setting_type,NO,'text'::setting_type,null,null,null
+accounting_settings,display_name,text,text,NO,null,null,null,null
+accounting_settings,description,text,text,YES,null,null,null,null
+accounting_settings,category,text,text,NO,'general'::text,null,null,null
+accounting_settings,display_order,integer,int4,NO,0,null,null,null
+accounting_settings,is_editable,boolean,bool,NO,TRUE,null,null,null
+accounting_settings,updated_by,uuid,uuid,YES,null,FOREIGN KEY,null,null
+accounting_settings,created_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+accounting_settings,updated_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+activity_log,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+activity_log,user_id,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+activity_log,action,text,text,NO,null,null,null,null
+activity_log,entity_type,text,text,NO,null,null,null,null
+activity_log,entity_id,uuid,uuid,YES,null,null,null,null
+activity_log,details,jsonb,jsonb,YES,null,null,null,null
+activity_log,created_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+admin_audit_events,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+admin_audit_events,admin_user_id,uuid,uuid,NO,null,FOREIGN KEY,profiles,id
+admin_audit_events,action_type,text,text,NO,null,null,null,null
+admin_audit_events,target_user_id,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+admin_audit_events,target_entity_type,text,text,YES,null,null,null,null
+admin_audit_events,target_entity_id,uuid,uuid,YES,null,null,null,null
+admin_audit_events,old_values,jsonb,jsonb,YES,null,null,null,null
+admin_audit_events,new_values,jsonb,jsonb,YES,null,null,null,null
+admin_audit_events,metadata,jsonb,jsonb,YES,null,null,null,null
+admin_audit_events,ip_address,text,text,YES,null,null,null,null
+admin_audit_events,user_agent,text,text,YES,null,null,null,null
+admin_audit_events,created_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+bank_reconciliations,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+bank_reconciliations,account_id,uuid,uuid,NO,null,FOREIGN KEY,chart_of_accounts,id
+bank_reconciliations,reconciliation_date,date,date,NO,CURRENT_DATE,null,null,null
+bank_reconciliations,statement_balance,numeric,numeric,YES,null,null,null,null
+bank_reconciliations,book_balance,numeric,numeric,YES,null,null,null,null
+bank_reconciliations,difference,numeric,numeric,YES,null,null,null,null
+bank_reconciliations,status,USER-DEFINED,reconciliation_status,YES,'in_progress'::reconciliation_status,null,null,null
+bank_reconciliations,notes,text,text,YES,null,null,null,null
+bank_reconciliations,reconciled_by,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+bank_reconciliations,created_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+bank_reconciliations,updated_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+bank_reconciliations,statement_start_date,date,date,YES,null,null,null,null
+bank_reconciliations,statement_end_date,date,date,YES,null,null,null,null
+bank_reconciliations,statement_ending_balance,numeric,numeric,YES,null,null,null,null
+bank_reconciliations,calculated_book_balance,numeric,numeric,YES,null,null,null,null
+bank_reconciliations,cleared_balance,numeric,numeric,YES,0,null,null,null
+bank_reconciliations,created_by,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+bank_reconciliations,completed_at,timestamp with time zone,timestamptz,YES,null,null,null,null
+bank_reconciliations,completed_by,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+bank_reconciliations,cancelled_at,timestamp with time zone,timestamptz,YES,null,null,null,null
+bank_reconciliations,cancelled_by,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+bank_reconciliations,rolled_back_at,timestamp with time zone,timestamptz,YES,null,null,null,null
+bank_reconciliations,rolled_back_by,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+bank_statement_lines,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+bank_statement_lines,reconciliation_id,uuid,uuid,NO,null,FOREIGN KEY,bank_reconciliations,id
+bank_statement_lines,external_transaction_id,text,text,YES,null,null,null,null
+bank_statement_lines,transaction_date,date,date,NO,null,null,null,null
+bank_statement_lines,description,text,text,NO,null,null,null,null
+bank_statement_lines,amount,numeric,numeric,NO,null,null,null,null
+bank_statement_lines,balance,numeric,numeric,YES,null,null,null,null
+bank_statement_lines,matched_gl_entry_id,uuid,uuid,YES,null,FOREIGN KEY,gl_entries,id
+bank_statement_lines,match_status,USER-DEFINED,bank_line_match_status,YES,'unmatched'::bank_line_match_status,null,null,null
+bank_statement_lines,matched_at,timestamp with time zone,timestamptz,YES,null,null,null,null
+bank_statement_lines,matched_by,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+bank_statement_lines,notes,text,text,YES,null,null,null,null
+bank_statement_lines,created_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+bill_line_items,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+bill_line_items,bill_id,uuid,uuid,NO,null,FOREIGN KEY,bills,id
+bill_line_items,description,text,text,NO,null,null,null,null
+bill_line_items,quantity,numeric,numeric,NO,1,null,null,null
+bill_line_items,unit_price,numeric,numeric,NO,null,null,null,null
+bill_line_items,amount,numeric,numeric,NO,null,null,null,null
+bill_line_items,gl_account_id,uuid,uuid,YES,null,FOREIGN KEY,chart_of_accounts,id
+bill_line_items,sort_order,integer,int4,YES,0,null,null,null
+bill_line_items,created_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+bills,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+bills,bill_number,text,text,NO,null,UNIQUE,null,null
+bills,vendor_id,uuid,uuid,NO,null,FOREIGN KEY,vendors,id
+bills,bill_date,date,date,NO,null,null,null,null
+bills,due_date,date,date,NO,null,null,null,null
+bills,received_date,date,date,YES,null,null,null,null
+bills,status,text,text,NO,'draft'::text,null,null,null
+bills,subtotal,numeric,numeric,NO,0,null,null,null
+bills,tax_amount,numeric,numeric,NO,0,null,null,null
+bills,total_amount,numeric,numeric,NO,0,null,null,null
+bills,amount_paid,numeric,numeric,NO,0,null,null,null
+bills,balance_due,numeric,numeric,NO,0,null,null,null
+bills,payment_terms,text,text,YES,null,null,null,null
+bills,reference_number,text,text,YES,null,null,null,null
+bills,notes,text,text,YES,null,null,null,null
+bills,created_by,uuid,uuid,YES,null,FOREIGN KEY,profiles,id
+bills,created_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+bills,updated_at,timestamp with time zone,timestamptz,YES,now(),null,null,null
+chart_of_accounts,id,uuid,uuid,NO,gen_random_uuid(),PRIMARY KEY,null,null
+chart_of_accounts,account_code,text,text,NO,null,UNIQUE,null,null
+chart_of_accounts,account_name,text,text,NO,null,null,null,null
+chart_of_accounts,account_type,USER-DEFINED,account_type,NO,null,null,null,null
+chart_of_accounts,account_subtype,text,text,YES,null,null,null,null
+chart_of_accounts,parent_account_id,uuid,uuid,YES,null,FOREIGN KEY,chart_of_accounts,id
