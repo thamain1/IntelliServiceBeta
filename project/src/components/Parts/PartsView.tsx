@@ -1,9 +1,24 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Package, AlertTriangle, TrendingDown, X, Warehouse, MapPin, Wrench } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, TrendingDown, X, Warehouse, MapPin, Wrench, Edit2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { WarehouseLocationsView } from './WarehouseLocationsView';
 import { PartInventoryModal } from './PartInventoryModal';
+
+interface Vendor {
+  id: string;
+  name: string;
+}
+
+interface VendorMapping {
+  id?: string;
+  vendor_id: string;
+  vendor_part_number: string;
+  standard_cost: number;
+  lead_time_days: number;
+  minimum_order_qty: number;
+  is_preferred_vendor: boolean;
+}
 
 type Part = Database['public']['Tables']['parts']['Row'] & {
   item_type?: string;
@@ -43,6 +58,16 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
     id: string;
     name: string;
   } | null>(null);
+  const [editingPart, setEditingPart] = useState<PartWithInventory | null>(null);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [vendorMapping, setVendorMapping] = useState<VendorMapping>({
+    vendor_id: '',
+    vendor_part_number: '',
+    standard_cost: 0,
+    lead_time_days: 7,
+    minimum_order_qty: 1,
+    is_preferred_vendor: true,
+  });
   const getInitialFormData = () => ({
     part_number: '',
     name: '',
@@ -69,7 +94,23 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
 
   useEffect(() => {
     loadParts();
+    loadVendors();
   }, [itemType]);
+
+  const loadVendors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setVendors(data || []);
+    } catch (error) {
+      console.error('Error loading vendors:', error);
+    }
+  };
 
   const loadParts = async () => {
     setLoading(true);
@@ -86,6 +127,151 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
       console.error(`Error loading ${itemLabelPlural.toLowerCase()}:`, error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openEditModal = async (part: PartWithInventory) => {
+    setEditingPart(part);
+    setFormData({
+      part_number: part.part_number,
+      name: part.name,
+      description: part.description || '',
+      manufacturer: part.manufacturer || '',
+      category: part.category || '',
+      quantity_on_hand: part.quantity_on_hand,
+      reorder_level: part.reorder_level,
+      unit_price: part.unit_price,
+      location: part.location || '',
+      warranty_period_months: part.warranty_period_months,
+      is_serialized: part.is_serialized || false,
+      default_warranty_months: part.default_warranty_months || 12,
+      vendor_part_number: part.vendor_part_number || '',
+      reorder_point: part.reorder_point || 0,
+      reorder_quantity: part.reorder_quantity || 0,
+      item_type: part.item_type || itemType,
+      is_returnable: part.is_returnable || false,
+      tool_category: part.tool_category || '',
+      asset_tag: part.asset_tag || '',
+    });
+
+    // Load existing vendor mapping
+    try {
+      const { data, error } = await supabase
+        .from('vendor_part_mappings')
+        .select('*')
+        .eq('part_id', part.id)
+        .eq('is_preferred_vendor', true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setVendorMapping({
+          id: data.id,
+          vendor_id: data.vendor_id,
+          vendor_part_number: data.vendor_part_number || '',
+          standard_cost: data.standard_cost || 0,
+          lead_time_days: data.lead_time_days || 7,
+          minimum_order_qty: data.minimum_order_qty || 1,
+          is_preferred_vendor: true,
+        });
+      } else {
+        setVendorMapping({
+          vendor_id: '',
+          vendor_part_number: '',
+          standard_cost: 0,
+          lead_time_days: 7,
+          minimum_order_qty: 1,
+          is_preferred_vendor: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading vendor mapping:', error);
+    }
+  };
+
+  const handleUpdatePart = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPart) return;
+
+    try {
+      // Update the part
+      const { error: partError } = await supabase
+        .from('parts')
+        .update({
+          part_number: formData.part_number,
+          name: formData.name,
+          description: formData.description || null,
+          manufacturer: formData.manufacturer || null,
+          category: formData.category || null,
+          quantity_on_hand: formData.quantity_on_hand,
+          reorder_level: formData.reorder_level,
+          unit_price: formData.unit_price,
+          location: formData.location || null,
+          warranty_period_months: formData.warranty_period_months,
+          is_serialized: formData.is_serialized,
+          default_warranty_months: formData.default_warranty_months,
+          vendor_part_number: formData.vendor_part_number || null,
+          reorder_point: formData.reorder_point,
+          reorder_quantity: formData.reorder_quantity,
+          is_returnable: formData.is_returnable,
+          tool_category: formData.tool_category || null,
+          asset_tag: formData.asset_tag || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingPart.id);
+
+      if (partError) throw partError;
+
+      // Handle vendor mapping
+      if (vendorMapping.vendor_id) {
+        if (vendorMapping.id) {
+          // Update existing mapping
+          const { error: mappingError } = await supabase
+            .from('vendor_part_mappings')
+            .update({
+              vendor_id: vendorMapping.vendor_id,
+              vendor_part_number: vendorMapping.vendor_part_number || null,
+              standard_cost: vendorMapping.standard_cost,
+              lead_time_days: vendorMapping.lead_time_days,
+              minimum_order_qty: vendorMapping.minimum_order_qty,
+              is_preferred_vendor: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', vendorMapping.id);
+
+          if (mappingError) throw mappingError;
+        } else {
+          // First, unset any existing preferred vendor
+          await supabase
+            .from('vendor_part_mappings')
+            .update({ is_preferred_vendor: false })
+            .eq('part_id', editingPart.id)
+            .eq('is_preferred_vendor', true);
+
+          // Create new mapping
+          const { error: mappingError } = await supabase
+            .from('vendor_part_mappings')
+            .insert({
+              part_id: editingPart.id,
+              vendor_id: vendorMapping.vendor_id,
+              vendor_part_number: vendorMapping.vendor_part_number || null,
+              standard_cost: vendorMapping.standard_cost,
+              lead_time_days: vendorMapping.lead_time_days,
+              minimum_order_qty: vendorMapping.minimum_order_qty,
+              is_preferred_vendor: true,
+            });
+
+          if (mappingError) throw mappingError;
+        }
+      }
+
+      setEditingPart(null);
+      setFormData(getInitialFormData());
+      loadParts();
+    } catch (error) {
+      console.error('Error updating part:', error);
+      alert('Failed to update part. Please try again.');
     }
   };
 
@@ -376,16 +562,26 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() =>
-                            setSelectedPartForInventory({ id: part.id, name: part.name })
-                          }
-                          className="btn btn-outline p-2 flex items-center space-x-1"
-                          title="Manage inventory by location"
-                        >
-                          <MapPin className="w-4 h-4" />
-                          <span className="text-xs">Locations</span>
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => openEditModal(part)}
+                            className="btn btn-outline p-2 flex items-center space-x-1"
+                            title="Edit part details"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            <span className="text-xs">Edit</span>
+                          </button>
+                          <button
+                            onClick={() =>
+                              setSelectedPartForInventory({ id: part.id, name: part.name })
+                            }
+                            className="btn btn-outline p-2 flex items-center space-x-1"
+                            title="Manage inventory by location"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            <span className="text-xs">Locations</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -703,6 +899,257 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
           partName={selectedPartForInventory.name}
           onClose={() => setSelectedPartForInventory(null)}
         />
+      )}
+
+      {editingPart && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit {itemLabel}</h2>
+              <button
+                onClick={() => {
+                  setEditingPart(null);
+                  setFormData(getInitialFormData());
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePart} className="p-6 overflow-y-auto flex-1">
+              <div className="space-y-6">
+                {/* Basic Info Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {itemLabel} Number *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.part_number}
+                        onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
+                        className="input"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {itemLabel} Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="input"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="input"
+                        rows={2}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Manufacturer
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.manufacturer}
+                        onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                        className="input"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Category
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="input"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Unit Price *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        step="0.01"
+                        value={formData.unit_price}
+                        onChange={(e) =>
+                          setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })
+                        }
+                        className="input"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Reorder Level
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.reorder_level}
+                        onChange={(e) =>
+                          setFormData({ ...formData, reorder_level: parseInt(e.target.value) || 0 })
+                        }
+                        className="input"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_serialized}
+                          onChange={(e) => setFormData({ ...formData, is_serialized: e.target.checked })}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Track by Serial Number
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preferred Vendor Section */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Preferred Vendor</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Vendor
+                      </label>
+                      <select
+                        value={vendorMapping.vendor_id}
+                        onChange={(e) => setVendorMapping({ ...vendorMapping, vendor_id: e.target.value })}
+                        className="input"
+                      >
+                        <option value="">-- Select Vendor --</option>
+                        {vendors.map((vendor) => (
+                          <option key={vendor.id} value={vendor.id}>
+                            {vendor.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {vendorMapping.vendor_id && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Vendor Part Number
+                          </label>
+                          <input
+                            type="text"
+                            value={vendorMapping.vendor_part_number}
+                            onChange={(e) =>
+                              setVendorMapping({ ...vendorMapping, vendor_part_number: e.target.value })
+                            }
+                            className="input"
+                            placeholder="Vendor's part number"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Standard Cost
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={vendorMapping.standard_cost}
+                            onChange={(e) =>
+                              setVendorMapping({
+                                ...vendorMapping,
+                                standard_cost: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="input"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Lead Time (Days)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={vendorMapping.lead_time_days}
+                            onChange={(e) =>
+                              setVendorMapping({
+                                ...vendorMapping,
+                                lead_time_days: parseInt(e.target.value) || 7,
+                              })
+                            }
+                            className="input"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Minimum Order Qty
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={vendorMapping.minimum_order_qty}
+                            onChange={(e) =>
+                              setVendorMapping({
+                                ...vendorMapping,
+                                minimum_order_qty: parseInt(e.target.value) || 1,
+                              })
+                            }
+                            className="input"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingPart(null);
+                    setFormData(getInitialFormData());
+                  }}
+                  className="btn btn-outline flex-1"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary flex-1">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
         </>
       )}
