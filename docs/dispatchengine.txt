@@ -1,0 +1,56 @@
+Technical Design: Custom ERP Dispatching Engine
+Stack: Node.js, Cloudflare Workers, Google Maps JS API, OSRM (Self-hosted)
+1. Overview
+The goal is to move from a high-cost "Google-dependent" architecture to a high-performance, low-cost "Hybrid" system. You will retain Google for the frontend UI but use self-hosted open-source tools for the expensive backend calculations.
+2. System Architecture
+Frontend (Browser): Google Maps JavaScript API for rendering the map, technician pins, and job locations.
+Orchestration Layer (API): Cloudflare Workers (Node.js runtime) to handle logic, database sync, and algorithm execution.
+Routing Engine (Compute): OSRM (Open Source Routing Machine) running in a Docker container on a private VPS (e.g., DigitalOcean or Hetzner).
+Database: Your existing ERP database (e.g., PostgreSQL or MongoDB).
+3. Workflow Logic
+The Request: The dispatcher clicks "Auto-Dispatch" on your ERP dashboard.
+The Sweep: Your Cloudflare Worker fetches all "Unassigned Work Orders" and "Available Technicians."
+The Matrix Call: The Worker sends these coordinates to your OSRM Table Service API (/table/v1/driving/).
+The Algorithm:
+OSRM returns a distance matrix (travel times between all points).
+The Worker applies the Sinkhorn Algorithm or a Greedy Multi-Objective Scorer to find the optimal matches.
+The Update: The Worker updates the ERP database and pushes a notification to the selected Technicians. 
+4. Implementation Snippets
+OSRM Table Request (Node.js)
+javascript
+// Using OSRM to get a 50x50 Distance Matrix for $0
+const osrmUrl = `http://your-vps-ip:5000/table/v1/driving/${coordinates}?annotations=duration`;
+const response = await fetch(osrmUrl);
+const { durations } = await response.json(); 
+// 'durations' is your cost matrix for the Sinkhorn algorithm
+Use code with caution.
+
+Simple Scoring Logic (Cloudflare Worker)
+javascript
+function calculateMatchScore(distance, skillMatch, priority) {
+  // Weights: 40% Distance, 40% Skills, 20% SLA Priority
+  return (distance * 0.4) + (skillMatch * 0.4) + (priority * 0.2);
+}
+Use code with caution.
+
+5. Cost Comparison (Estimated)
+Feature	Google Maps Platform	Custom (OSRM + Cloudflare)
+Distance Matrix	~$10 / 1k elements	Free (Included in VPS)
+Routing	~$5 / 1k requests	Free (Included in VPS)
+Hosting	Serverless (Included)	~$10-20/mo (Flat Fee VPS)
+Total (at Scale)	$2,000+ / mo	~$30 / mo
+6. Maintenance & Scalability
+Map Data: Update the OpenStreetMap .pbf files monthly via a simple cron job on your VPS.
+Latency: Cloudflare Workers provide sub-10ms execution at the edge, ensuring the dispatching tool feels "instant" to the end-user.
+Would you like me to expand on the specific VPS setup commands for OSRM or the database schema required for the Skill Matrix?
+
+
+
+
+
+1 site
+OSRM Table API: Free distance matrix API with examples
+Sep 17, 2023 — /table/v1/driving/ instructs OSRM to call the Table Service API (ver 1) with the driving profile. -123.2100192,49.2688067;-123.235...
+
+Afi Labs
+

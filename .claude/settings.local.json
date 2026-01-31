@@ -18,7 +18,14 @@
       "Bash(git pull:*)",
       "Bash(npx wrangler --version)",
       "Bash(npx wrangler:*)",
-      "WebFetch(domain:intelliservice.pages.dev)"
+      "WebFetch(domain:intelliservice.pages.dev)",
+      "Bash(grep:*)",
+      "Bash(dir /s:*)",
+      "Bash(findstr:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git cat-file:*)",
+      "Bash(git count-objects:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

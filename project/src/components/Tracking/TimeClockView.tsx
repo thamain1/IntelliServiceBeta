@@ -345,21 +345,21 @@ export function TimeClockView() {
       </div>
 
       {activeLog ? (
-        <div className="card p-8 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-2 border-green-500">
-          <div className="flex items-center justify-between mb-6">
+        <div className="card p-4 md:p-8 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-2 border-green-500">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                <Clock className="w-6 h-6 text-white animate-pulse" />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <Clock className="w-5 h-5 md:w-6 md:h-6 text-white animate-pulse" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Currently Clocked In</h3>
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">Currently Clocked In</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Since {new Date(activeLog.clock_in_time).toLocaleTimeString()}
                 </p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-5xl font-bold text-green-600 font-mono">
+            <div className="text-center md:text-right">
+              <div className="text-3xl md:text-5xl font-bold text-green-600 font-mono">
                 {calculateElapsedTime()}
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Elapsed Time</p>
