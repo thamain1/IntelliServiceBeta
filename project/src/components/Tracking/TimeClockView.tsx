@@ -104,7 +104,7 @@ export function TimeClockView() {
     try {
       let query = supabase
         .from('time_logs')
-        .select('*, profiles(full_name), tickets(title, ticket_number), projects(name)')
+        .select('*, profiles!time_logs_user_id_fkey(full_name), tickets(title, ticket_number), projects(name)')
         .gte('clock_in_time', `${filterDate}T00:00:00`)
         .lte('clock_in_time', `${filterDate}T23:59:59`)
         .order('clock_in_time', { ascending: false });
