@@ -335,8 +335,13 @@ export function TechnicianTicketView() {
       await loadTicketDetails(selectedTicket.id);
       await loadOnSiteProgress(selectedTicket.id);
 
-      // Auto-start location sharing when work begins
-      if (!isLocationSharing) {
+      // Send immediate location ping when starting work on a ticket
+      // This provides dispatcher with fresh location when tech arrives on site
+      if (isLocationSharing) {
+        // Already sharing - just send an immediate ping
+        await sendImmediateLocationPing();
+      } else {
+        // Not sharing yet - start location sharing (which also sends initial ping)
         await startLocationSharing();
       }
     } catch (error) {
@@ -442,7 +447,9 @@ export function TechnicianTicketView() {
     }
   };
 
-  // Location sharing functions
+  // Location sharing functions - 15 minute interval (matches Time Clock)
+  const LOCATION_UPDATE_INTERVAL = 15 * 60 * 1000; // 15 minutes
+
   const startLocationSharing = async () => {
     if (!profile?.id) return;
 
@@ -455,7 +462,7 @@ export function TechnicianTicketView() {
 
     const started = await GeolocationService.startAutoUpdates(
       profile.id,
-      60000, // Update every 1 minute
+      LOCATION_UPDATE_INTERVAL, // Update every 15 minutes
       (position) => {
         setLastLocation(position);
         setLocationError(null);
@@ -469,6 +476,20 @@ export function TechnicianTicketView() {
 
     if (started) {
       setIsLocationSharing(true);
+    }
+  };
+
+  // Send immediate location ping without affecting the interval timer
+  const sendImmediateLocationPing = async () => {
+    if (!profile?.id) return;
+
+    try {
+      const position = await GeolocationService.getCurrentPosition();
+      await GeolocationService.saveLocation(profile.id, position);
+      setLastLocation(position);
+      console.log('[Location] Immediate ping sent:', position.latitude, position.longitude);
+    } catch (error) {
+      console.error('[Location] Failed to send immediate ping:', error);
     }
   };
 
@@ -1467,10 +1488,60 @@ export function TechnicianTicketView() {
             </div>
             <button
               onClick={async () => {
-                const ticket = tickets.find(t => t.id === activeTimer.ticket_id);
+                // Check if we have a valid ticket_id
+                if (!activeTimer?.ticket_id) {
+                  console.error('No ticket_id in activeTimer:', activeTimer);
+                  // There's a timer running but no ticket associated - this is a stale/orphan timer
+                  const shouldStop = confirm(
+                    'This timer is not linked to any ticket (possibly a stale timer). Would you like to stop it?'
+                  );
+                  if (shouldStop && activeTimer?.time_log_id) {
+                    try {
+                      await supabase
+                        .from('time_logs')
+                        .update({ clock_out_time: new Date().toISOString(), status: 'completed' })
+                        .eq('id', activeTimer.time_log_id);
+                      await checkActiveTimer();
+                      alert('Stale timer stopped.');
+                    } catch (error) {
+                      console.error('Error stopping timer:', error);
+                      alert('Could not stop timer. Please try manually in the database.');
+                    }
+                  }
+                  return;
+                }
+
+                let ticket = tickets.find(t => t.id === activeTimer.ticket_id);
                 if (ticket) {
                   setSelectedTicket(ticket);
                   setViewMode('edit');
+                } else {
+                  // Ticket not in local list, fetch it directly
+                  console.log('Fetching ticket directly, id:', activeTimer.ticket_id);
+                  try {
+                    const { data, error } = await supabase
+                      .from('tickets')
+                      .select('*, customers!tickets_customer_id_fkey(name, phone, email, address), equipment(equipment_type, model_number)')
+                      .eq('id', activeTimer.ticket_id)
+                      .single();
+
+                    console.log('Fetch result:', { data, error });
+
+                    if (error) {
+                      console.error('Database error:', error);
+                      alert(`Could not load ticket: ${error.message}`);
+                      return;
+                    }
+                    if (data) {
+                      setSelectedTicket(data as Ticket);
+                      setViewMode('edit');
+                    } else {
+                      alert('Ticket not found in database.');
+                    }
+                  } catch (error: any) {
+                    console.error('Error fetching ticket:', error);
+                    alert(`Could not load ticket: ${error?.message || 'Unknown error'}`);
+                  }
                 }
               }}
               className="btn btn-outline text-green-700 border-green-300"

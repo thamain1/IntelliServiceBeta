@@ -339,11 +339,11 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <div className="flex space-x-8 px-6">
+        <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-thin">
+          <div className="flex space-x-8 px-6 min-w-max">
             <button
               onClick={() => handleTabChange('preview')}
-              className={`py-4 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'preview'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -360,7 +360,7 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
 
             <button
               onClick={() => handleTabChange('errors')}
-              className={`py-4 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'errors'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -379,7 +379,7 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
 
             <button
               onClick={() => handleTabChange('logs')}
-              className={`py-4 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'logs'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'

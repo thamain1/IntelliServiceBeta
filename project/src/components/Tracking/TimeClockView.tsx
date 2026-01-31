@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Clock, LogIn, LogOut, Calendar, User, CheckCircle, XCircle, MapPin, Edit, Plus } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Clock, LogIn, LogOut, Calendar, User, CheckCircle, XCircle, MapPin, Edit, Plus, MapPinOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { GeolocationService, GeolocationPosition, GeolocationError } from '../../services/GeolocationService';
 import type { Database } from '../../lib/database.types';
 
 type TimeLog = Database['public']['Tables']['time_logs']['Row'] & {
@@ -22,7 +23,54 @@ export function TimeClockView() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingLog, setEditingLog] = useState<TimeLog | null>(null);
 
+  // Location sharing state
+  const [isLocationSharing, setIsLocationSharing] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [lastLocation, setLastLocation] = useState<GeolocationPosition | null>(null);
+  const locationSharingStarted = useRef(false);
+
   const isAdmin = profile?.role === 'admin' || profile?.role === 'dispatcher';
+
+  // 15-minute interval for location updates (900000ms)
+  const LOCATION_UPDATE_INTERVAL = 15 * 60 * 1000;
+
+  // Start location sharing with 15-minute intervals
+  const startLocationSharing = async () => {
+    if (!profile || locationSharingStarted.current) return;
+
+    setLocationError(null);
+
+    const success = await GeolocationService.startAutoUpdates(
+      profile.id,
+      LOCATION_UPDATE_INTERVAL,
+      (position) => {
+        setLastLocation(position);
+        setIsLocationSharing(true);
+        setLocationError(null);
+        console.log('[TimeClockView] Location update:', position);
+      },
+      (error) => {
+        console.error('[TimeClockView] Location error:', error);
+        setLocationError(error.message);
+        setIsLocationSharing(false);
+      }
+    );
+
+    if (success) {
+      locationSharingStarted.current = true;
+      setIsLocationSharing(true);
+      console.log('[TimeClockView] Location sharing started with 15-minute interval');
+    }
+  };
+
+  // Stop location sharing
+  const stopLocationSharing = () => {
+    GeolocationService.stopAutoUpdates();
+    locationSharingStarted.current = false;
+    setIsLocationSharing(false);
+    setLastLocation(null);
+    console.log('[TimeClockView] Location sharing stopped');
+  };
 
   useEffect(() => {
     loadTimeLogs();
@@ -34,6 +82,23 @@ export function TimeClockView() {
 
     return () => clearInterval(timer);
   }, [filterDate, showAllUsers]);
+
+  // Auto-resume location sharing if already clocked in
+  useEffect(() => {
+    if (activeLog && profile && !locationSharingStarted.current) {
+      console.log('[TimeClockView] Already clocked in, auto-resuming location sharing');
+      startLocationSharing();
+    }
+  }, [activeLog, profile]);
+
+  // Cleanup location sharing on unmount
+  useEffect(() => {
+    return () => {
+      if (locationSharingStarted.current) {
+        stopLocationSharing();
+      }
+    };
+  }, []);
 
   const loadTimeLogs = async () => {
     try {
@@ -111,6 +176,9 @@ export function TimeClockView() {
       if (error) throw error;
       await checkActiveLog();
       await loadTimeLogs();
+
+      // Start location sharing when clocking in
+      await startLocationSharing();
     } catch (error) {
       console.error('Error clocking in:', error);
       alert('Failed to clock in. Please try again.');
@@ -138,6 +206,10 @@ export function TimeClockView() {
         .eq('id', activeLog.id);
 
       if (error) throw error;
+
+      // Stop location sharing when clocking out
+      stopLocationSharing();
+
       setActiveLog(null);
       await loadTimeLogs();
     } catch (error) {
@@ -302,6 +374,50 @@ export function TimeClockView() {
               </p>
             </div>
           )}
+
+          {/* Location Sharing Status */}
+          <div className={`rounded-lg p-4 mb-4 flex items-center justify-between ${
+            isLocationSharing
+              ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700'
+              : locationError
+                ? 'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700'
+                : 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700'
+          }`}>
+            <div className="flex items-center space-x-3">
+              {isLocationSharing ? (
+                <MapPin className="w-5 h-5 text-green-600 dark:text-green-400" />
+              ) : (
+                <MapPinOff className="w-5 h-5 text-red-600 dark:text-red-400" />
+              )}
+              <div>
+                <p className={`text-sm font-medium ${
+                  isLocationSharing
+                    ? 'text-green-800 dark:text-green-300'
+                    : locationError
+                      ? 'text-red-800 dark:text-red-300'
+                      : 'text-yellow-800 dark:text-yellow-300'
+                }`}>
+                  {isLocationSharing
+                    ? 'Location Sharing Active'
+                    : locationError
+                      ? 'Location Sharing Error'
+                      : 'Starting Location Sharing...'}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {isLocationSharing
+                    ? `Updates every 15 minutes${lastLocation ? ` • Last update: ${new Date(lastLocation.timestamp).toLocaleTimeString()}` : ''}`
+                    : locationError
+                      ? locationError
+                      : 'Requesting location permission...'}
+                </p>
+              </div>
+            </div>
+            {isLocationSharing && lastLocation && (
+              <div className="text-right text-xs text-gray-500 dark:text-gray-400">
+                <p>Accuracy: {Math.round(lastLocation.accuracy)}m</p>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={handleClockOut}
