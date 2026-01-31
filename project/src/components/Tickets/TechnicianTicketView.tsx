@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Camera, Package, MessageSquare, CheckCircle, Clock, AlertTriangle, MapPin, Phone, User, Plus, X, Upload, History, Eye, AlertOctagon, PackageX, Navigation, NavigationOff } from 'lucide-react';
+import { Camera, Package, MessageSquare, CheckCircle, Clock, AlertTriangle, MapPin, Phone, User, Plus, X, Upload, History, Eye, AlertOctagon, PackageX } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { holdTicketForParts, reportTicketIssue } from '../../services/TicketHoldService';
-import { GeolocationService, type GeolocationPosition } from '../../services/GeolocationService';
 
 type ActiveTimer = {
   has_active_timer: boolean;
@@ -126,11 +125,6 @@ export function TechnicianTicketView() {
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  // Location sharing state
-  const [isLocationSharing, setIsLocationSharing] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [lastLocation, setLastLocation] = useState<GeolocationPosition | null>(null);
 
   useEffect(() => {
     loadMyTickets();
@@ -334,16 +328,6 @@ export function TechnicianTicketView() {
       await loadMyTickets();
       await loadTicketDetails(selectedTicket.id);
       await loadOnSiteProgress(selectedTicket.id);
-
-      // Send immediate location ping when starting work on a ticket
-      // This provides dispatcher with fresh location when tech arrives on site
-      if (isLocationSharing) {
-        // Already sharing - just send an immediate ping
-        await sendImmediateLocationPing();
-      } else {
-        // Not sharing yet - start location sharing (which also sends initial ping)
-        await startLocationSharing();
-      }
     } catch (error) {
       console.error('Error starting work:', error);
       alert('Failed to start work: ' + (error as Error).message);
@@ -446,75 +430,6 @@ export function TechnicianTicketView() {
       alert('Failed to report issue: ' + (error as Error).message);
     }
   };
-
-  // Location sharing functions - 15 minute interval (matches Time Clock)
-  const LOCATION_UPDATE_INTERVAL = 15 * 60 * 1000; // 15 minutes
-
-  const startLocationSharing = async () => {
-    if (!profile?.id) return;
-
-    if (!GeolocationService.isSupported()) {
-      setLocationError('Geolocation is not supported by your browser');
-      return;
-    }
-
-    setLocationError(null);
-
-    const started = await GeolocationService.startAutoUpdates(
-      profile.id,
-      LOCATION_UPDATE_INTERVAL, // Update every 15 minutes
-      (position) => {
-        setLastLocation(position);
-        setLocationError(null);
-        console.log('[Location] Updated:', position.latitude, position.longitude);
-      },
-      (error) => {
-        setLocationError(error.message);
-        console.error('[Location] Error:', error.message);
-      }
-    );
-
-    if (started) {
-      setIsLocationSharing(true);
-    }
-  };
-
-  // Send immediate location ping without affecting the interval timer
-  const sendImmediateLocationPing = async () => {
-    if (!profile?.id) return;
-
-    try {
-      const position = await GeolocationService.getCurrentPosition();
-      await GeolocationService.saveLocation(profile.id, position);
-      setLastLocation(position);
-      console.log('[Location] Immediate ping sent:', position.latitude, position.longitude);
-    } catch (error) {
-      console.error('[Location] Failed to send immediate ping:', error);
-    }
-  };
-
-  const stopLocationSharing = () => {
-    GeolocationService.stopAutoUpdates();
-    setIsLocationSharing(false);
-    setLastLocation(null);
-  };
-
-  const toggleLocationSharing = async () => {
-    if (isLocationSharing) {
-      stopLocationSharing();
-    } else {
-      await startLocationSharing();
-    }
-  };
-
-  // Cleanup location sharing on unmount
-  useEffect(() => {
-    return () => {
-      if (isLocationSharing) {
-        GeolocationService.stopAutoUpdates();
-      }
-    };
-  }, [isLocationSharing]);
 
   const handleAddUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1076,50 +991,6 @@ export function TechnicianTicketView() {
 
               {!isReadonly && (
                 <>
-                  {/* Location Sharing Status */}
-                  <div className={`p-3 rounded-lg border ${
-                    isLocationSharing
-                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                      : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
-                  }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        {isLocationSharing ? (
-                          <Navigation className="w-4 h-4 text-green-600 dark:text-green-400" />
-                        ) : (
-                          <NavigationOff className="w-4 h-4 text-gray-400" />
-                        )}
-                        <span className={`text-sm font-medium ${
-                          isLocationSharing
-                            ? 'text-green-700 dark:text-green-300'
-                            : 'text-gray-600 dark:text-gray-400'
-                        }`}>
-                          {isLocationSharing ? 'Location Sharing Active' : 'Location Sharing Off'}
-                        </span>
-                      </div>
-                      <button
-                        onClick={toggleLocationSharing}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          isLocationSharing ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            isLocationSharing ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                    {locationError && (
-                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">{locationError}</p>
-                    )}
-                    {lastLocation && isLocationSharing && (
-                      <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                        Last update: {new Date(lastLocation.timestamp).toLocaleTimeString()}
-                      </p>
-                    )}
-                  </div>
-
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
                   <div className="space-y-3">
                     {(selectedTicket.status === 'open' || selectedTicket.status === 'scheduled') && !isCurrentlyTiming && (
