@@ -29,7 +29,7 @@ interface BillDetailModalProps {
 
 interface Account {
   id: string;
-  account_number: string;
+  account_code: string;
   account_name: string;
   account_type: string;
 }
@@ -88,10 +88,10 @@ export function BillDetailModal({
     try {
       const { data } = await supabase
         .from('chart_of_accounts')
-        .select('id, account_number, account_name, account_type')
+        .select('id, account_code, account_name, account_type')
         .eq('is_active', true)
         .in('account_type', ['expense', 'asset', 'cost_of_goods_sold'])
-        .order('account_number');
+        .order('account_code');
       setAccounts(data || []);
     } catch (err) {
       console.error('Failed to load accounts:', err);
@@ -431,13 +431,13 @@ export function BillDetailModal({
                               <option value="">Select...</option>
                               {accounts.map((acc) => (
                                 <option key={acc.id} value={acc.id}>
-                                  {acc.account_number}
+                                  {acc.account_code}
                                 </option>
                               ))}
                             </select>
                           ) : (
                             <span className="text-sm text-gray-500">
-                              {item.gl_account?.account_number || '-'}
+                              {item.gl_account?.account_code || '-'}
                             </span>
                           )}
                         </td>

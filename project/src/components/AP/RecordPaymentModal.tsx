@@ -28,7 +28,7 @@ interface Vendor {
 
 interface BankAccount {
   id: string;
-  account_number: string;
+  account_code: string;
   account_name: string;
 }
 
@@ -116,11 +116,11 @@ export function RecordPaymentModal({
     try {
       const { data } = await supabase
         .from('chart_of_accounts')
-        .select('id, account_number, account_name')
+        .select('id, account_code, account_name')
         .eq('is_active', true)
         .eq('account_type', 'asset')
         .ilike('account_name', '%bank%')
-        .order('account_number');
+        .order('account_code');
       setBankAccounts(data || []);
     } catch (err) {
       console.error('Failed to load bank accounts:', err);
@@ -412,7 +412,7 @@ export function RecordPaymentModal({
                   <option value="">Select bank account...</option>
                   {bankAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.account_number} - {account.account_name}
+                      {account.account_code} - {account.account_name}
                     </option>
                   ))}
                 </select>

@@ -19,7 +19,7 @@ interface Vendor {
 
 interface Account {
   id: string;
-  account_number: string;
+  account_code: string;
   account_name: string;
   account_type: string;
 }
@@ -93,10 +93,10 @@ export function NewBillModal({ isOpen, onClose, onBillCreated, preselectedVendor
     try {
       const { data } = await supabase
         .from('chart_of_accounts')
-        .select('id, account_number, account_name, account_type')
+        .select('id, account_code, account_name, account_type')
         .eq('is_active', true)
         .in('account_type', ['expense', 'asset', 'cost_of_goods_sold'])
-        .order('account_number');
+        .order('account_code');
       setAccounts(data || []);
     } catch (err) {
       console.error('Failed to load accounts:', err);
@@ -395,7 +395,7 @@ export function NewBillModal({ isOpen, onClose, onBillCreated, preselectedVendor
                               <optgroup key={type} label={type.replace(/_/g, ' ').toUpperCase()}>
                                 {accts.map((acc) => (
                                   <option key={acc.id} value={acc.id}>
-                                    {acc.account_number} - {acc.account_name}
+                                    {acc.account_code} - {acc.account_name}
                                   </option>
                                 ))}
                               </optgroup>
