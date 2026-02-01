@@ -22,6 +22,7 @@ import {
   Upload,
   Zap,
   Phone,
+  Mail,
 } from 'lucide-react';
 
 interface Section {
@@ -728,7 +729,7 @@ export function HelpView() {
 
           {/* Escalations & Support Contact */}
           <div className="mt-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-lg">
                   <Phone className="w-5 h-5 text-white" />
@@ -738,13 +739,22 @@ export function HelpView() {
                   <p className="text-blue-100 text-sm">Jesse Morgan - Available for urgent issues</p>
                 </div>
               </div>
-              <a
-                href="tel:+13146236782"
-                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                <span>(314) 623-6782</span>
-              </a>
+              <div className="flex items-center gap-3">
+                <a
+                  href="tel:+13146236782"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>(314) 623-6782</span>
+                </a>
+                <a
+                  href="mailto:2ea34ab9.NETORGFT14421663.onmicrosoft.com@amer.teams.ms?subject=IntelliService%20Issue%20Report"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Report Issue</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
