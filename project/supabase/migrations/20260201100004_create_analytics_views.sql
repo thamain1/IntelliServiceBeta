@@ -162,8 +162,8 @@ SELECT
     c.email as customer_email,
     e.manufacturer as equipment_manufacturer,
     e.model_number as equipment_model,
-    e.install_date as equipment_install_date,
-    EXTRACT(YEAR FROM AGE(CURRENT_DATE, e.install_date))::INTEGER as equipment_age_years,
+    e.installation_date as equipment_install_date,
+    EXTRACT(YEAR FROM AGE(CURRENT_DATE, e.installation_date))::INTEGER as equipment_age_years,
     t.assigned_to as technician_id,
     p.full_name as technician_name
 FROM tickets t
