@@ -370,12 +370,12 @@ SELECT
     v.postal_code,
     EXTRACT(YEAR FROM vp.payment_date)::INTEGER as tax_year,
     COUNT(vp.id) as payment_count,
-    SUM(vp.amount) as total_paid
+    SUM(vp.payment_amount) as total_paid
 FROM vendors v
 JOIN vendor_payments vp ON v.id = vp.vendor_id
 WHERE v.is_1099_eligible = TRUE
 GROUP BY v.id, v.name, v.tax_id_number, v.default_1099_box, v.address, v.city, v.state, v.postal_code, EXTRACT(YEAR FROM vp.payment_date)
-HAVING SUM(vp.amount) >= 600
+HAVING SUM(vp.payment_amount) >= 600
 ORDER BY tax_year DESC, total_paid DESC;
 
 -- Accounting Period Status View
