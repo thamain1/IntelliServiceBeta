@@ -38,6 +38,7 @@ const CustomerValueInsight = lazy(() => import('./components/BI/CustomerValueIns
 const DSOInsight = lazy(() => import('./components/BI/DSOInsight').then(m => ({ default: m.DSOInsight })));
 const LaborEfficiencyInsight = lazy(() => import('./components/BI/LaborEfficiencyInsight').then(m => ({ default: m.LaborEfficiencyInsight })));
 const HelpView = lazy(() => import('./components/Help/HelpView').then(m => ({ default: m.HelpView })));
+const CRMView = lazy(() => import('./components/CRM/CRMView').then(m => ({ default: m.CRMView })));
 
 // Loading spinner for Suspense fallback
 const LoadingSpinner = () => (
@@ -213,6 +214,20 @@ function AppContent() {
         return <DataImportView />;
       case 'help':
         return <HelpView />;
+      case 'crm-pipeline':
+        return <CRMView initialTab="pipeline" />;
+      case 'crm-leads':
+        return <CRMView initialTab="leads" />;
+      case 'crm-opportunities':
+        return <CRMView initialTab="opportunities" />;
+      case 'crm-interactions':
+        return <CRMView initialTab="interactions" />;
+      case 'crm-analytics':
+      case 'crm-analytics-pareto':
+      case 'crm-analytics-callbacks':
+      case 'crm-analytics-equipment':
+      case 'crm-analytics-tech-quality':
+        return <CRMView initialTab="analytics" />;
       default:
         return <DashboardView />;
     }

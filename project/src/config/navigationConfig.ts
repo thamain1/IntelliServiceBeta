@@ -33,6 +33,12 @@ import {
   Upload,
   HelpCircle,
   LucideIcon,
+  Target,
+  MessageSquare,
+  UserPlus,
+  Kanban,
+  Activity,
+  BarChart3,
 } from 'lucide-react';
 
 export interface NavigationItem {
@@ -226,6 +232,70 @@ export const navigationConfig: NavigationGroup[] = [
         label: 'Service Contracts',
         icon: FileText,
         roles: ['admin', 'dispatcher'],
+      },
+    ],
+  },
+  {
+    id: 'crm',
+    label: 'CRM & Sales',
+    icon: Target,
+    roles: ['admin', 'dispatcher'],
+    children: [
+      {
+        id: 'crm-pipeline',
+        label: 'Sales Pipeline',
+        icon: Kanban,
+        roles: ['admin', 'dispatcher'],
+      },
+      {
+        id: 'crm-leads',
+        label: 'Leads Inbox',
+        icon: UserPlus,
+        roles: ['admin', 'dispatcher'],
+      },
+      {
+        id: 'crm-opportunities',
+        label: 'Sales Opportunities',
+        icon: Target,
+        roles: ['admin', 'dispatcher'],
+      },
+      {
+        id: 'crm-interactions',
+        label: 'Interactions',
+        icon: MessageSquare,
+        roles: ['admin', 'dispatcher'],
+      },
+      {
+        id: 'crm-analytics',
+        label: 'Analytics',
+        icon: BarChart3,
+        roles: ['admin', 'dispatcher'],
+        children: [
+          {
+            id: 'crm-analytics-pareto',
+            label: 'Problem Analysis',
+            icon: PieChart,
+            roles: ['admin', 'dispatcher'],
+          },
+          {
+            id: 'crm-analytics-callbacks',
+            label: 'Callback Analysis',
+            icon: Activity,
+            roles: ['admin', 'dispatcher'],
+          },
+          {
+            id: 'crm-analytics-equipment',
+            label: 'Equipment Reliability',
+            icon: Wrench,
+            roles: ['admin', 'dispatcher'],
+          },
+          {
+            id: 'crm-analytics-tech-quality',
+            label: 'Tech Quality',
+            icon: Users,
+            roles: ['admin', 'dispatcher'],
+          },
+        ],
       },
     ],
   },

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, User, Calendar, MapPin, Wrench, AlertCircle, Plus, Trash2, UserPlus, Pause, Package, Play, Tag, TrendingUp, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { CodeSelector } from '../CRM/CodeSelector';
 import type { Database } from '../../lib/database.types';
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
@@ -35,6 +36,8 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
   const [saving, setSaving] = useState(false);
   const [hoursOnsite, setHoursOnsite] = useState<string>('');
   const [status, setStatus] = useState<string>('');
+  const [problemCode, setProblemCode] = useState<string | null>(null);
+  const [resolutionCode, setResolutionCode] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<TicketAssignment[]>([]);
   const [technicians, setTechnicians] = useState<Profile[]>([]);
   const [showAddTechnician, setShowAddTechnician] = useState(false);
@@ -88,6 +91,8 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
         setTicket(data);
         setHoursOnsite(data.hours_onsite?.toString() || '');
         setStatus(data.status);
+        setProblemCode((data as any).problem_code || null);
+        setResolutionCode((data as any).resolution_code || null);
       }
     } catch (error) {
       console.error('Error loading ticket:', error);
@@ -313,6 +318,8 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
       const updates: any = {
         status,
         hours_onsite: hoursOnsite ? parseFloat(hoursOnsite) : null,
+        problem_code: problemCode,
+        resolution_code: resolutionCode,
       };
 
       if (status === 'completed' && !ticket.completed_date) {
@@ -757,6 +764,25 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
                   </p>
                 </div>
               </div>
+
+              {/* Problem/Resolution Codes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <CodeSelector
+                  type="problem"
+                  value={problemCode || undefined}
+                  onChange={(code) => setProblemCode(code)}
+                  label="Problem Code"
+                />
+                <CodeSelector
+                  type="resolution"
+                  value={resolutionCode || undefined}
+                  onChange={(code) => setResolutionCode(code)}
+                  label="Resolution Code"
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Select codes to track issues and enable analytics. Resolution code is recommended when completing tickets.
+              </p>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">

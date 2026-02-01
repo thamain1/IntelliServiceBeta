@@ -1,0 +1,9 @@
+export { CRMView } from './CRMView';
+export { SalesPipeline } from './SalesPipeline';
+export { LeadsInbox } from './LeadsInbox';
+export { SalesOpportunities } from './SalesOpportunities';
+export { InteractionsView } from './InteractionsView';
+export { AnalyticsDashboard } from './AnalyticsDashboard';
+export { NewInteractionModal } from './NewInteractionModal';
+export { Customer360View } from './Customer360View';
+export { CodeSelector } from './CodeSelector';
