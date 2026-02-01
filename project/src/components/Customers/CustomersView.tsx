@@ -33,6 +33,37 @@ export function CustomersView() {
   const [autoGeocode, setAutoGeocode] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeStatus, setGeocodeStatus] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+
+  const validateCustomerForm = (): string[] => {
+    const errors: string[] = [];
+
+    if (!formData.name || formData.name.trim().length < 2) {
+      errors.push('Customer name must be at least 2 characters');
+    }
+
+    if (!formData.phone || formData.phone.trim().length < 10) {
+      errors.push('Phone number is required (at least 10 digits)');
+    }
+
+    if (!formData.address || formData.address.trim().length < 5) {
+      errors.push('Street address is required');
+    }
+
+    if (!formData.city || formData.city.trim().length < 2) {
+      errors.push('City is required');
+    }
+
+    if (!formData.state || formData.state.trim().length < 2) {
+      errors.push('State is required');
+    }
+
+    if (!formData.zip_code || formData.zip_code.trim().length < 5) {
+      errors.push('ZIP code is required (at least 5 digits)');
+    }
+
+    return errors;
+  };
 
   useEffect(() => {
     loadCustomers();
@@ -237,6 +268,7 @@ export function CustomersView() {
               <button
                 onClick={() => {
                   setShowAddModal(false);
+                  setFormErrors([]);
                   setFormData({
                     name: '',
                     email: '',
@@ -259,6 +291,15 @@ export function CustomersView() {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
+
+                // Validate form
+                const errors = validateCustomerForm();
+                if (errors.length > 0) {
+                  setFormErrors(errors);
+                  return;
+                }
+                setFormErrors([]);
+
                 try {
                   // Insert customer first
                   const { data: newCustomer, error } = await supabase
@@ -309,6 +350,17 @@ export function CustomersView() {
               }}
               className="p-6 space-y-4 overflow-y-auto"
             >
+              {formErrors.length > 0 && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Please fix the following errors:</p>
+                  <ul className="list-disc list-inside text-sm text-red-600 dark:text-red-400 space-y-1">
+                    {formErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Customer Name *
@@ -320,6 +372,7 @@ export function CustomersView() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="input"
                   placeholder="John Doe or ABC Company"
+                  minLength={2}
                 />
               </div>
 
@@ -339,10 +392,11 @@ export function CustomersView() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Phone
+                    Phone *
                   </label>
                   <input
                     type="tel"
+                    required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="input"
@@ -381,10 +435,11 @@ export function CustomersView() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Street Address
+                  Street Address *
                 </label>
                 <input
                   type="text"
+                  required
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="input"
@@ -395,10 +450,11 @@ export function CustomersView() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    City
+                    City *
                   </label>
                   <input
                     type="text"
+                    required
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     className="input"
@@ -408,10 +464,11 @@ export function CustomersView() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    State
+                    State *
                   </label>
                   <input
                     type="text"
+                    required
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                     className="input"
@@ -422,10 +479,11 @@ export function CustomersView() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    ZIP Code
+                    ZIP Code *
                   </label>
                   <input
                     type="text"
+                    required
                     value={formData.zip_code}
                     onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
                     className="input"
@@ -487,6 +545,7 @@ export function CustomersView() {
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
+                    setFormErrors([]);
                     setFormData({
                       name: '',
                       email: '',
@@ -496,6 +555,8 @@ export function CustomersView() {
                       state: '',
                       zip_code: '',
                       notes: '',
+                      site_contact_name: '',
+                      site_contact_phone: '',
                     });
                   }}
                   className="btn btn-outline flex-1"
