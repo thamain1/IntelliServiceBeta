@@ -28,9 +28,10 @@ type CRMTab = 'pipeline' | 'leads' | 'opportunities' | 'interactions' | 'analyti
 
 interface CRMViewProps {
   initialTab?: string;
+  analyticsView?: 'pareto' | 'callbacks' | 'equipment' | 'techs';
 }
 
-export function CRMView({ initialTab = 'pipeline' }: CRMViewProps) {
+export function CRMView({ initialTab = 'pipeline', analyticsView }: CRMViewProps) {
   const getTabFromInitial = (tab: string): CRMTab => {
     if (tab.includes('pipeline')) return 'pipeline';
     if (tab.includes('leads')) return 'leads';
@@ -100,7 +101,7 @@ export function CRMView({ initialTab = 'pipeline' }: CRMViewProps) {
       case 'interactions':
         return <InteractionsView />;
       case 'analytics':
-        return <AnalyticsDashboard />;
+        return <AnalyticsDashboard initialView={analyticsView} />;
       default:
         return <SalesPipeline onRefresh={loadStats} />;
     }

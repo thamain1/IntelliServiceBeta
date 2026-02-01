@@ -224,10 +224,13 @@ function AppContent() {
         return <CRMView initialTab="interactions" />;
       case 'crm-analytics':
       case 'crm-analytics-pareto':
+        return <CRMView initialTab="analytics" analyticsView="pareto" />;
       case 'crm-analytics-callbacks':
+        return <CRMView initialTab="analytics" analyticsView="callbacks" />;
       case 'crm-analytics-equipment':
+        return <CRMView initialTab="analytics" analyticsView="equipment" />;
       case 'crm-analytics-tech-quality':
-        return <CRMView initialTab="analytics" />;
+        return <CRMView initialTab="analytics" analyticsView="techs" />;
       default:
         return <DashboardView />;
     }

@@ -63,9 +63,20 @@ interface TechQuality {
   avg_ticket_value: number;
 }
 
-export function AnalyticsDashboard() {
+interface AnalyticsDashboardProps {
+  initialView?: 'pareto' | 'callbacks' | 'equipment' | 'techs';
+}
+
+export function AnalyticsDashboard({ initialView }: AnalyticsDashboardProps) {
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'pareto' | 'callbacks' | 'equipment' | 'techs'>('pareto');
+  const [activeView, setActiveView] = useState<'pareto' | 'callbacks' | 'equipment' | 'techs'>(initialView || 'pareto');
+
+  // Update active view when initialView prop changes (from sidebar navigation)
+  useEffect(() => {
+    if (initialView) {
+      setActiveView(initialView);
+    }
+  }, [initialView]);
   const [paretoData, setParetoData] = useState<ParetoItem[]>([]);
   const [reworkData, setReworkData] = useState<ReworkItem[]>([]);
   const [equipmentData, setEquipmentData] = useState<EquipmentReliability[]>([]);
