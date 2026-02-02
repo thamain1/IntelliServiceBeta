@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, Truck, ShoppingCart, Hash, Shield, MapPin, ArrowRightLeft, PackageCheck, Wrench } from 'lucide-react';
+import { Package, Truck, ShoppingCart, Hash, Shield, MapPin, ArrowRightLeft, PackageCheck, Wrench, ClipboardList } from 'lucide-react';
 import { PartsView } from './PartsView';
 import { VendorsView } from './VendorsView';
 import { PurchaseOrdersView } from './PurchaseOrdersView';
@@ -8,8 +8,9 @@ import { StockLocationsView } from './StockLocationsView';
 import { WarrantyDashboard } from './WarrantyDashboard';
 import { PartsTransferView } from './PartsTransferView';
 import { PartsReceivingView } from './PartsReceivingView';
+import { PartsRequestQueue } from './PartsRequestQueue';
 
-type TabType = 'catalog' | 'vendors' | 'orders' | 'serialized' | 'locations' | 'warranty' | 'transfers' | 'receiving';
+type TabType = 'catalog' | 'vendors' | 'orders' | 'serialized' | 'locations' | 'warranty' | 'transfers' | 'receiving' | 'requests';
 type ItemType = 'part' | 'tool';
 
 interface PartsManagementViewProps {
@@ -38,19 +39,29 @@ export function PartsManagementView({ initialView, itemType = 'part' }: PartsMan
       case 'parts-receipts':
       case 'tools-receipts':
         return 'receiving';
+      case 'parts-requests':
+        return 'requests';
       default:
         return 'catalog';
     }
   };
 
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
+  const [linkedRequest, setLinkedRequest] = useState<any>(null);
 
   useEffect(() => {
     setActiveTab(getInitialTab());
   }, [initialView]);
 
+  // Handle creating a PO from a parts request
+  const handleCreatePOFromRequest = (request: any) => {
+    setLinkedRequest(request);
+    setActiveTab('orders');
+  };
+
   const tabs: Array<{ id: TabType; label: string; icon: typeof Package }> = [
     { id: 'catalog', label: `${itemLabelPlural} Catalog`, icon: ItemIcon },
+    { id: 'requests', label: 'Parts Requests', icon: ClipboardList },
     { id: 'vendors', label: 'Vendors', icon: Truck },
     { id: 'orders', label: 'Purchase Orders', icon: ShoppingCart },
     { id: 'serialized', label: 'Serialized Inventory', icon: Hash },
@@ -72,7 +83,7 @@ export function PartsManagementView({ initialView, itemType = 'part' }: PartsMan
       </div>
 
       <div className="card p-1">
-        <div className="grid grid-cols-2 md:grid-cols-8 gap-1">
+        <div className="grid grid-cols-2 md:grid-cols-9 gap-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -95,8 +106,15 @@ export function PartsManagementView({ initialView, itemType = 'part' }: PartsMan
 
       <div className="mt-6">
         {activeTab === 'catalog' && <PartsView itemType={itemType} />}
+        {activeTab === 'requests' && <PartsRequestQueue onCreatePO={handleCreatePOFromRequest} />}
         {activeTab === 'vendors' && <VendorsView />}
-        {activeTab === 'orders' && <PurchaseOrdersView itemType={itemType} />}
+        {activeTab === 'orders' && (
+          <PurchaseOrdersView
+            itemType={itemType}
+            linkedRequest={linkedRequest}
+            onClearLinkedRequest={() => setLinkedRequest(null)}
+          />
+        )}
         {activeTab === 'serialized' && <SerializedPartsView itemType={itemType} />}
         {activeTab === 'locations' && <StockLocationsView itemType={itemType} />}
         {activeTab === 'transfers' && <PartsTransferView itemType={itemType} />}

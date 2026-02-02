@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Package, MapPin, Hash, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Package, MapPin, Hash, Calendar, CheckCircle, AlertCircle, Ticket } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { inventoryService } from '../../services/InventoryService';
@@ -9,9 +9,18 @@ type PurchaseOrderLine = Database['public']['Tables']['purchase_order_lines']['R
 type Part = Database['public']['Tables']['parts']['Row'];
 type StockLocation = Database['public']['Tables']['stock_locations']['Row'];
 
+interface LinkedTicketInfo {
+  ticket_number: string;
+  title: string;
+  customer_name: string;
+}
+
 interface POLineWithPart extends PurchaseOrderLine {
   parts: Part;
   quantity_received_total?: number;
+  linked_ticket_id?: string | null;
+  linked_request_id?: string | null;
+  linked_ticket?: LinkedTicketInfo | null;
 }
 
 interface ReceivingItem {
@@ -54,7 +63,7 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
           .single(),
         supabase
           .from('purchase_order_lines')
-          .select('*, parts(*)')
+          .select('*, parts(*), tickets!purchase_order_lines_linked_ticket_id_fkey(ticket_number, title, customers(name))')
           .eq('po_id', purchaseOrderId)
           .order('line_number'),
         supabase
@@ -276,13 +285,42 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
                       </span>
                     </div>
                   </div>
-                  {part.is_serialized && (
-                    <span className="badge badge-blue">
-                      <Hash className="w-3 h-3 mr-1" />
-                      Serialized
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end space-y-2">
+                    {part.is_serialized && (
+                      <span className="badge badge-blue">
+                        <Hash className="w-3 h-3 mr-1" />
+                        Serialized
+                      </span>
+                    )}
+                    {line.linked_ticket_id && (
+                      <span className="badge badge-green">
+                        <Ticket className="w-3 h-3 mr-1" />
+                        Linked to Ticket
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Show linked ticket info if present */}
+                {line.linked_ticket_id && (line as any).tickets && (
+                  <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center space-x-2">
+                      <Ticket className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                        Parts for Ticket: {(line as any).tickets?.ticket_number}
+                      </span>
+                    </div>
+                    <p className="text-sm text-green-700 dark:text-green-400 mt-1">
+                      {(line as any).tickets?.title}
+                      {(line as any).tickets?.customers?.name && (
+                        <span className="ml-2">• {(line as any).tickets?.customers?.name}</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                      When received, this ticket will automatically be updated and ready for scheduling.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>

@@ -116,6 +116,12 @@ export const navigationConfig: NavigationGroup[] = [
         roles: ['admin', 'dispatcher', 'technician'],
         children: [
           {
+            id: 'parts-requests',
+            label: 'Parts Requests',
+            icon: ClipboardList,
+            roles: ['admin', 'dispatcher'],
+          },
+          {
             id: 'parts-inventory',
             label: 'Stock Levels',
             icon: Package,

@@ -45,15 +45,34 @@ type POLineItem = {
   quantity_ordered: number;
   unit_price: number;
   line_total: number;
+  linked_ticket_id?: string;
+  linked_request_id?: string;
+  request_line_id?: string;
 };
 
 type ItemType = 'part' | 'tool';
 
-interface PurchaseOrdersViewProps {
-  itemType?: ItemType;
+interface LinkedPartsRequest {
+  request_id: string;
+  ticket_id: string;
+  ticket_number: string;
+  customer_name: string;
+  parts_requested: Array<{
+    line_id: string;
+    part_id: string;
+    part_number: string;
+    part_name: string;
+    quantity_requested: number;
+  }>;
 }
 
-export function PurchaseOrdersView({ itemType = 'part' }: PurchaseOrdersViewProps) {
+interface PurchaseOrdersViewProps {
+  itemType?: ItemType;
+  linkedRequest?: LinkedPartsRequest;
+  onClearLinkedRequest?: () => void;
+}
+
+export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLinkedRequest }: PurchaseOrdersViewProps) {
   const isTool = itemType === 'tool';
   const itemLabel = isTool ? 'Tool' : 'Part';
   const itemLabelPlural = isTool ? 'Tools' : 'Parts';
@@ -77,6 +96,33 @@ export function PurchaseOrdersView({ itemType = 'part' }: PurchaseOrdersViewProp
   useEffect(() => {
     loadData();
   }, [itemType]);
+
+  // Auto-open modal and pre-populate when linkedRequest is provided
+  useEffect(() => {
+    if (linkedRequest && parts.length > 0) {
+      // Pre-populate line items from the linked request
+      const prePopulatedItems: POLineItem[] = linkedRequest.parts_requested.map((reqPart) => {
+        const part = parts.find((p) => p.id === reqPart.part_id);
+        return {
+          id: crypto.randomUUID(),
+          part_id: reqPart.part_id,
+          description: reqPart.part_name,
+          quantity_ordered: reqPart.quantity_requested,
+          unit_price: part?.unit_price || 0,
+          line_total: reqPart.quantity_requested * (part?.unit_price || 0),
+          linked_ticket_id: linkedRequest.ticket_id,
+          linked_request_id: linkedRequest.request_id,
+          request_line_id: reqPart.line_id,
+        };
+      });
+      setLineItems(prePopulatedItems);
+      setFormData({
+        ...formData,
+        notes: `Parts request for Ticket ${linkedRequest.ticket_number} - ${linkedRequest.customer_name}`,
+      });
+      setShowAddModal(true);
+    }
+  }, [linkedRequest, parts]);
 
   const loadData = async () => {
     try {
@@ -200,13 +246,36 @@ export function PurchaseOrdersView({ itemType = 'part' }: PurchaseOrdersViewProp
         quantity_ordered: item.quantity_ordered,
         unit_price: item.unit_price,
         line_total: item.line_total,
+        linked_ticket_id: item.linked_ticket_id || null,
+        linked_request_id: item.linked_request_id || null,
       }));
 
-      const { error: linesError } = await supabase
+      const { data: insertedLines, error: linesError } = await supabase
         .from('purchase_order_lines')
-        .insert(lineItemsToInsert);
+        .insert(lineItemsToInsert)
+        .select();
 
       if (linesError) throw linesError;
+
+      // If this PO is linked to a parts request, update the request status
+      if (linkedRequest) {
+        const { error: updateError } = await supabase
+          .from('ticket_parts_requests')
+          .update({
+            po_id: poData.id,
+            status: 'ordered',
+          })
+          .eq('id', linkedRequest.request_id);
+
+        if (updateError) {
+          console.error('Error updating parts request:', updateError);
+        }
+
+        // Clear the linked request
+        if (onClearLinkedRequest) {
+          onClearLinkedRequest();
+        }
+      }
 
       setShowAddModal(false);
       setFormData({
@@ -217,6 +286,11 @@ export function PurchaseOrdersView({ itemType = 'part' }: PurchaseOrdersViewProp
       });
       setLineItems([]);
       loadData();
+
+      // Show success message with linked info
+      if (linkedRequest) {
+        alert(`Purchase Order ${poNumber} created and linked to Ticket ${linkedRequest.ticket_number}. When parts are received, the ticket will automatically be updated.`);
+      }
     } catch (error) {
       console.error('Error creating PO:', error);
       alert('Failed to create purchase order. Please try again.');
