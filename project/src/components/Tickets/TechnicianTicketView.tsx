@@ -330,12 +330,14 @@ export function TechnicianTicketView() {
   };
 
   const loadTruckInventory = async () => {
-    if (!profile?.id) return;
+    // Use assigned technician's ID if available, otherwise use logged-in user's ID
+    const technicianId = selectedTicket?.assigned_to || profile?.id;
+    if (!technicianId) return;
     try {
       const { data: truckParts, error: truckError } = await supabase
         .from('vw_technician_truck_inventory')
         .select('part_id, part_number, part_name, unit_price, qty_on_hand')
-        .eq('technician_id', profile.id)
+        .eq('technician_id', technicianId)
         .gt('qty_on_hand', 0);
 
       if (truckError) {
