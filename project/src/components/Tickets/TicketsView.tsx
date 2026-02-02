@@ -156,6 +156,8 @@ export function TicketsView({ initialFilter }: TicketsViewProps = {}) {
           new Date(ticket.completed_date) >= today;
       } else if (statusFilter === 'active_technicians') {
         matchesStatus = ticket.assigned_to !== null && ticket.status === 'in_progress';
+      } else if (statusFilter === 'on_hold') {
+        matchesStatus = ticket.hold_active === true;
       } else if (statusFilter === 'hold_parts') {
         matchesStatus = ticket.hold_parts_active === true;
       } else if (statusFilter === 'hold_issue') {
@@ -278,6 +280,9 @@ export function TicketsView({ initialFilter }: TicketsViewProps = {}) {
             <option value="open">Open</option>
             <option value="scheduled">Scheduled</option>
             <option value="in_progress">In Progress</option>
+            <option value="on_hold">On Hold (All)</option>
+            <option value="hold_parts">On Hold - Parts</option>
+            <option value="hold_issue">On Hold - Issue</option>
             <option value="completed">Completed</option>
             <option value="closed_billed">Closed Billed</option>
             <option value="cancelled">Cancelled</option>
