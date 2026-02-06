@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { X, Clock, User, Calendar, MapPin, Wrench, AlertCircle, Plus, Trash2, UserPlus, Pause, Package, Play, Tag, TrendingUp, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CodeSelector } from '../CRM/CodeSelector';
+import { AHSPanel } from '../Tickets/AHSPanel';
+import { AHSTicketService } from '../../services/AHSTicketService';
 import type { Database } from '../../lib/database.types';
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
@@ -408,6 +410,7 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
       in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
       cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+      awaiting_ahs_authorization: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
     };
     return colors[status] || colors.open;
   };
@@ -755,6 +758,11 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
               </div>
             </div>
 
+            {/* AHS Warranty Panel */}
+            {AHSTicketService.isAHSTicket(ticket.ticket_type) && (
+              <AHSPanel ticketId={ticketId} onUpdate={() => { loadTicket(); onUpdate(); }} />
+            )}
+
             <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Update Ticket
@@ -775,6 +783,9 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
                     <option value="in_progress">In Progress</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
+                    {AHSTicketService.isAHSTicket(ticket?.ticket_type) && (
+                      <option value="awaiting_ahs_authorization">Awaiting AHS Authorization</option>
+                    )}
                   </select>
                 </div>
 

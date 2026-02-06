@@ -184,6 +184,31 @@ Deno.serve(async (req: Request) => {
       .eq('id', publicLink.estimate_id)
       .single();
 
+    // Trigger notification to dispatch/admin staff
+    try {
+      const notificationUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-estimate-notification`;
+      const notificationResponse = await fetch(notificationUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({
+          estimate_id: publicLink.estimate_id,
+          decision,
+          decided_name,
+          send_email: true,
+        }),
+      });
+
+      if (!notificationResponse.ok) {
+        console.error('Failed to send notification:', await notificationResponse.text());
+      }
+    } catch (notifError) {
+      console.error('Error calling notification function:', notifError);
+      // Don't fail the main request if notification fails
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

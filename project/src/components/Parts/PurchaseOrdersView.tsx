@@ -89,6 +89,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
     order_date: new Date().toISOString().split('T')[0],
     expected_delivery_date: '',
     notes: '',
+    po_source: 'LOCAL_VENDOR' as 'LOCAL_VENDOR' | 'AHS_PORTAL',
   });
 
   const [lineItems, setLineItems] = useState<POLineItem[]>([]);
@@ -231,6 +232,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
             shipping_amount: totals.shipping,
             total_amount: totals.total,
             notes: formData.notes || null,
+            po_source: formData.po_source,
           },
         ])
         .select()
@@ -283,6 +285,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
         order_date: new Date().toISOString().split('T')[0],
         expected_delivery_date: '',
         notes: '',
+        po_source: 'LOCAL_VENDOR',
       });
       setLineItems([]);
       loadData();
@@ -575,7 +578,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
             </div>
 
             <form onSubmit={handleCreatePO} className="p-6 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Vendor *
@@ -620,6 +623,20 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
                     }
                     className="input"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    PO Source
+                  </label>
+                  <select
+                    value={formData.po_source}
+                    onChange={(e) => setFormData({ ...formData, po_source: e.target.value as 'LOCAL_VENDOR' | 'AHS_PORTAL' })}
+                    className="input"
+                  >
+                    <option value="LOCAL_VENDOR">Local Vendor</option>
+                    <option value="AHS_PORTAL">AHS Portal</option>
+                  </select>
                 </div>
               </div>
 

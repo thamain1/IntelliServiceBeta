@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { AHSSettingsService } from '../../services/AHSSettingsService';
 import type { Database } from '../../lib/database.types';
 
 type Customer = Database['public']['Tables']['customers']['Row'];
@@ -21,7 +22,7 @@ interface NewTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  defaultType?: 'PRJ' | 'SVC';
+  defaultType?: 'PRJ' | 'SVC' | 'WARRANTY_AHS';
   projectId?: string;
 }
 
@@ -54,13 +55,25 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
     site_contact_name: '',
     site_contact_phone: '',
     problem_code: '',
+    // AHS fields
+    ahs_dispatch_number: '',
   });
+  const [ahsDefaults, setAhsDefaults] = useState<{ diagnosisFee: number; laborRate: number } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       loadData();
     }
   }, [isOpen]);
+
+  // Load AHS defaults when WARRANTY_AHS type is selected
+  useEffect(() => {
+    if (formData.ticket_type === 'WARRANTY_AHS' && !ahsDefaults) {
+      AHSSettingsService.getAHSDefaults().then((defaults) => {
+        setAhsDefaults({ diagnosisFee: defaults.diagnosisFee, laborRate: defaults.laborRate });
+      });
+    }
+  }, [formData.ticket_type, ahsDefaults]);
 
   useEffect(() => {
     if (selectedCustomer) {
@@ -133,6 +146,15 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
       if (formData.site_contact_phone) insertData.site_contact_phone = formData.site_contact_phone;
       if (formData.problem_code) insertData.problem_code = formData.problem_code;
 
+      // AHS fields
+      if (formData.ticket_type === 'WARRANTY_AHS') {
+        insertData.ahs_dispatch_number = formData.ahs_dispatch_number;
+        if (ahsDefaults) {
+          insertData.ahs_diagnosis_fee_amount = ahsDefaults.diagnosisFee;
+          insertData.ahs_labor_rate_per_hour = ahsDefaults.laborRate;
+        }
+      }
+
       const { error } = await supabase.from('tickets').insert(insertData);
 
       if (error) {
@@ -159,9 +181,11 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
         site_contact_name: '',
         site_contact_phone: '',
         problem_code: '',
+        ahs_dispatch_number: '',
       });
       setSelectedCustomer('');
       setShowGasLeakWarning(false);
+      setAhsDefaults(null);
       onSuccess();
       onClose();
     } catch (error) {
@@ -197,15 +221,16 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
                 <select
                   required
                   value={formData.ticket_type}
-                  onChange={(e) => setFormData({ ...formData, ticket_type: e.target.value as 'PRJ' | 'SVC', project_id: e.target.value === 'SVC' ? '' : formData.project_id })}
+                  onChange={(e) => setFormData({ ...formData, ticket_type: e.target.value as 'PRJ' | 'SVC' | 'WARRANTY_AHS', project_id: e.target.value === 'SVC' || e.target.value === 'WARRANTY_AHS' ? '' : formData.project_id })}
                   className="input"
                   disabled={!!projectId}
                 >
                   <option value="SVC">SVC - Service Work Order</option>
                   <option value="PRJ">PRJ - Project Work Order</option>
+                  <option value="WARRANTY_AHS">Warranty - AHS</option>
                 </select>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {formData.ticket_type === 'SVC' ? 'One-off service calls' : 'Linked to a project'}
+                  {formData.ticket_type === 'SVC' ? 'One-off service calls' : formData.ticket_type === 'PRJ' ? 'Linked to a project' : 'AHS warranty dispatch'}
                 </p>
               </div>
 
@@ -233,8 +258,42 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
                   </p>
                 </div>
               )}
+
+              {formData.ticket_type === 'WARRANTY_AHS' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <Shield className="w-4 h-4 inline mr-1" />
+                    AHS Dispatch # *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.ahs_dispatch_number}
+                    onChange={(e) => setFormData({ ...formData, ahs_dispatch_number: e.target.value })}
+                    placeholder="Enter AHS dispatch number"
+                    className="input"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Dispatch number from AHS warranty portal
+                  </p>
+                </div>
+              )}
             </div>
           </div>
+
+          {formData.ticket_type === 'WARRANTY_AHS' && ahsDefaults && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="flex items-center mb-2">
+                <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">AHS Warranty Defaults</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-600 dark:text-gray-400">Diagnosis Fee: <span className="font-medium text-gray-900 dark:text-white">${ahsDefaults.diagnosisFee.toFixed(2)}</span></div>
+                <div className="text-gray-600 dark:text-gray-400">Labor Rate: <span className="font-medium text-gray-900 dark:text-white">${ahsDefaults.laborRate.toFixed(2)}/hr</span></div>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">These rates can be adjusted after ticket creation in the AHS panel</p>
+            </div>
+          )}
 
           {formData.ticket_type === 'PRJ' && (
             <div>

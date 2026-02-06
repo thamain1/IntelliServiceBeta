@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, User, Calendar, Mail, Phone, MapPin, Edit, Save, Plus, Trash2, Send, CheckCircle, XCircle, Eye, Link as LinkIcon, RefreshCw, DollarSign, ExternalLink, Briefcase, Wrench } from 'lucide-react';
+import { X, FileText, User, Calendar, Mail, Phone, MapPin, Edit, Save, Plus, Trash2, Send, CheckCircle, XCircle, Eye, Link as LinkIcon, RefreshCw, DollarSign, ExternalLink, Briefcase, Wrench, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SendEstimateModal } from './SendEstimateModal';
+import { AHSTicketService } from '../../services/AHSTicketService';
 
 type EstimateDetail = {
   id: string;
@@ -50,6 +51,7 @@ type LineItem = {
   ext_cost?: number;
   cost_source?: string;
   cost_as_of?: string;
+  payer_type?: 'AHS' | 'CUSTOMER';
 };
 
 type ConversionInfo = {
@@ -88,6 +90,11 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
   const [linkStatus, setLinkStatus] = useState<any>(null);
   const [conversionInfo, setConversionInfo] = useState<ConversionInfo | null>(null);
   const [refreshingCosts, setRefreshingCosts] = useState(false);
+  const [ahsTicketData, setAhsTicketData] = useState<{
+    isAHSTicket: boolean;
+    coveredAmount: number | null;
+    ticketId: string | null;
+  }>({ isAHSTicket: false, coveredAmount: null, ticketId: null });
 
   useEffect(() => {
     if (isOpen && estimateId) {
@@ -153,6 +160,23 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
       setEstimate(estimateRes.data);
       setLineItems(lineItemsRes.data || []);
       await Promise.all([loadLinkStatus(), loadConversionInfo()]);
+
+      // Check if estimate is linked to an AHS ticket
+      const ticketId = estimateRes.data.ticket_id;
+      if (ticketId) {
+        const ahsData = await AHSTicketService.getAHSTicketData(ticketId);
+        if (ahsData && AHSTicketService.isAHSTicket(ahsData.ticketType)) {
+          setAhsTicketData({
+            isAHSTicket: true,
+            coveredAmount: ahsData.coveredAmount,
+            ticketId,
+          });
+        } else {
+          setAhsTicketData({ isAHSTicket: false, coveredAmount: null, ticketId: null });
+        }
+      } else {
+        setAhsTicketData({ isAHSTicket: false, coveredAmount: null, ticketId: null });
+      }
     } catch (error) {
       console.error('Error loading estimate details:', error);
     } finally {
@@ -231,6 +255,17 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
     const total = subtotal - discount + taxAmount;
 
     return { subtotal, discount, taxAmount, total };
+  };
+
+  const calculateAHSSplit = () => {
+    const ahsTotal = lineItems.reduce((sum, item) =>
+      item.payer_type === 'AHS' && item.item_type !== 'discount' ? sum + Number(item.line_total) : sum, 0
+    );
+    const customerTotal = lineItems.reduce((sum, item) =>
+      (item.payer_type === 'CUSTOMER' || !item.payer_type) && item.item_type !== 'discount' ? sum + Number(item.line_total) : sum, 0
+    );
+
+    return { ahsTotal, customerTotal };
   };
 
   const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
@@ -364,6 +399,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
           equipment_id: item.equipment_id || null,
           labor_hours: item.item_type === 'labor' ? item.quantity : null,
           labor_rate: item.item_type === 'labor' ? item.unit_price : null,
+          payer_type: item.payer_type || 'CUSTOMER',
         }));
 
       console.log('All line items before filter:', lineItems);
@@ -952,7 +988,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
                         )}
                       </div>
 
-                      <div className="col-span-2">
+                      <div className={ahsTicketData.isAHSTicket ? "col-span-1" : "col-span-2"}>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Total
                         </label>
@@ -960,6 +996,34 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
                           ${Number(item.line_total).toFixed(2)}
                         </div>
                       </div>
+
+                      {/* AHS Payer Type Column */}
+                      {ahsTicketData.isAHSTicket && (
+                        <div className="col-span-1">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <Shield className="w-3 h-3 inline mr-1" />
+                            Payer
+                          </label>
+                          {editing ? (
+                            <select
+                              value={item.payer_type || 'CUSTOMER'}
+                              onChange={(e) => updateLineItem(item.id, 'payer_type', e.target.value)}
+                              className="input text-sm"
+                            >
+                              <option value="CUSTOMER">Customer</option>
+                              <option value="AHS">AHS</option>
+                            </select>
+                          ) : (
+                            <div className={`text-xs font-medium px-2 py-1 rounded inline-block ${
+                              item.payer_type === 'AHS'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                            }`}>
+                              {item.payer_type === 'AHS' ? 'AHS' : 'Customer'}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {editing && lineItems.length > 1 && (
                         <div className="col-span-12 flex justify-end">
@@ -1073,6 +1137,36 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
                         ${totals.total.toFixed(2)}
                       </span>
                     </div>
+
+                    {/* AHS Split Display */}
+                    {ahsTicketData.isAHSTicket && (
+                      <div className="mt-4 pt-3 border-t border-blue-200 dark:border-blue-700">
+                        <div className="flex items-center mb-2">
+                          <Shield className="w-4 h-4 text-blue-600 mr-1" />
+                          <span className="text-sm font-medium text-blue-800 dark:text-blue-300">AHS Warranty Split</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-600 dark:text-blue-400">AHS Covered:</span>
+                            <span className="font-medium text-blue-800 dark:text-blue-200">
+                              ${calculateAHSSplit().ahsTotal.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Customer Responsibility:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              ${calculateAHSSplit().customerTotal.toFixed(2)}
+                            </span>
+                          </div>
+                          {ahsTicketData.coveredAmount !== null && (
+                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-700 mt-1">
+                              <span>AHS Authorization Limit:</span>
+                              <span>${ahsTicketData.coveredAmount.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
