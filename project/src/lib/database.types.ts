@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -285,6 +285,71 @@ export type Database = {
           {
             foreignKeyName: "admin_audit_events_target_user_id_fkey"
             columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
+        ]
+      }
+      ahs_audit_log: {
+        Row: {
+          action: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          new_value: Json | null
+          notes: string | null
+          old_value: Json | null
+          performed_at: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          new_value?: Json | null
+          notes?: string | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          new_value?: Json | null
+          notes?: string | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ahs_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ahs_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ahs_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "ahs_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
             isOneToOne: false
             referencedRelation: "vw_technician_truck_serialized"
             referencedColumns: ["technician_id"]
@@ -1028,6 +1093,21 @@ export type Database = {
             referencedColumns: ["technician_id"]
           },
         ]
+      }
+      customer_account_sequences: {
+        Row: {
+          customer_type: Database["public"]["Enums"]["customer_type"]
+          last_number: number
+        }
+        Insert: {
+          customer_type: Database["public"]["Enums"]["customer_type"]
+          last_number?: number
+        }
+        Update: {
+          customer_type?: Database["public"]["Enums"]["customer_type"]
+          last_number?: number
+        }
+        Relationships: []
       }
       customer_contacts: {
         Row: {
@@ -2005,8 +2085,9 @@ export type Database = {
           city: string | null
           converted_at: string | null
           created_at: string | null
+          created_by: string | null
           credit_terms: string | null
-          customer_type: string | null
+          customer_type: Database["public"]["Enums"]["customer_type"] | null
           email: string | null
           external_customer_id: string | null
           external_id: string | null
@@ -2028,6 +2109,7 @@ export type Database = {
           state: string | null
           status: string | null
           updated_at: string | null
+          updated_by: string | null
           zip_code: string | null
         }
         Insert: {
@@ -2038,8 +2120,9 @@ export type Database = {
           city?: string | null
           converted_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           credit_terms?: string | null
-          customer_type?: string | null
+          customer_type?: Database["public"]["Enums"]["customer_type"] | null
           email?: string | null
           external_customer_id?: string | null
           external_id?: string | null
@@ -2061,6 +2144,7 @@ export type Database = {
           state?: string | null
           status?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -2071,8 +2155,9 @@ export type Database = {
           city?: string | null
           converted_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           credit_terms?: string | null
-          customer_type?: string | null
+          customer_type?: Database["public"]["Enums"]["customer_type"] | null
           email?: string | null
           external_customer_id?: string | null
           external_id?: string | null
@@ -2094,15 +2179,72 @@ export type Database = {
           state?: string | null
           status?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
           {
             foreignKeyName: "customers_import_batch_id_fkey"
             columns: ["import_batch_id"]
             isOneToOne: false
             referencedRelation: "import_batches"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "customers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "customers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
           },
         ]
       }
@@ -2920,6 +3062,7 @@ export type Database = {
           overridden_by: string | null
           override_reason: string | null
           part_id: string | null
+          payer_type: Database["public"]["Enums"]["payer_type"] | null
           quantity: number | null
           rate_source: Database["public"]["Enums"]["rate_source"] | null
           rate_type: Database["public"]["Enums"]["labor_rate_tier"] | null
@@ -2949,6 +3092,7 @@ export type Database = {
           overridden_by?: string | null
           override_reason?: string | null
           part_id?: string | null
+          payer_type?: Database["public"]["Enums"]["payer_type"] | null
           quantity?: number | null
           rate_source?: Database["public"]["Enums"]["rate_source"] | null
           rate_type?: Database["public"]["Enums"]["labor_rate_tier"] | null
@@ -2978,6 +3122,7 @@ export type Database = {
           overridden_by?: string | null
           override_reason?: string | null
           part_id?: string | null
+          payer_type?: Database["public"]["Enums"]["payer_type"] | null
           quantity?: number | null
           rate_source?: Database["public"]["Enums"]["rate_source"] | null
           rate_type?: Database["public"]["Enums"]["labor_rate_tier"] | null
@@ -3397,6 +3542,7 @@ export type Database = {
           terms_and_conditions: string | null
           total_amount: number | null
           updated_at: string | null
+          updated_by: string | null
           viewed_date: string | null
         }
         Insert: {
@@ -3437,6 +3583,7 @@ export type Database = {
           terms_and_conditions?: string | null
           total_amount?: number | null
           updated_at?: string | null
+          updated_by?: string | null
           viewed_date?: string | null
         }
         Update: {
@@ -3477,6 +3624,7 @@ export type Database = {
           terms_and_conditions?: string | null
           total_amount?: number | null
           updated_at?: string | null
+          updated_by?: string | null
           viewed_date?: string | null
         }
         Relationships: [
@@ -3760,6 +3908,34 @@ export type Database = {
             referencedRelation: "service_contracts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "estimates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "estimates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "estimates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
         ]
       }
       gl_audit_log: {
@@ -3842,6 +4018,7 @@ export type Database = {
           cleared_at: string | null
           cleared_by_user_id: string | null
           created_at: string | null
+          created_by: string | null
           credit_amount: number | null
           debit_amount: number | null
           description: string
@@ -3858,6 +4035,8 @@ export type Database = {
           reference_id: string | null
           reference_type: string | null
           reversing_entry_id: string | null
+          updated_at: string | null
+          updated_by: string | null
           void_reason: string | null
           voided_at: string | null
           voided_by: string | null
@@ -3867,6 +4046,7 @@ export type Database = {
           cleared_at?: string | null
           cleared_by_user_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           credit_amount?: number | null
           debit_amount?: number | null
           description: string
@@ -3883,6 +4063,8 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           reversing_entry_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
@@ -3892,6 +4074,7 @@ export type Database = {
           cleared_at?: string | null
           cleared_by_user_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           credit_amount?: number | null
           debit_amount?: number | null
           description?: string
@@ -3908,6 +4091,8 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           reversing_entry_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
@@ -3963,6 +4148,34 @@ export type Database = {
             referencedColumns: ["technician_id"]
           },
           {
+            foreignKeyName: "gl_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gl_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "gl_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "gl_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
+          {
             foreignKeyName: "gl_entries_import_batch_id_fkey"
             columns: ["import_batch_id"]
             isOneToOne: false
@@ -4003,6 +4216,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bank_reconciliations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gl_entries_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gl_entries_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "gl_entries_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "gl_entries_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
           },
           {
             foreignKeyName: "gl_entries_voided_by_fkey"
@@ -5083,6 +5324,7 @@ export type Database = {
       inventory_movements: {
         Row: {
           created_at: string | null
+          created_by: string | null
           from_location_id: string | null
           id: string
           moved_by: string | null
@@ -5098,9 +5340,12 @@ export type Database = {
           serialized_part_id: string | null
           ticket_id: string | null
           to_location_id: string | null
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           from_location_id?: string | null
           id?: string
           moved_by?: string | null
@@ -5116,9 +5361,12 @@ export type Database = {
           serialized_part_id?: string | null
           ticket_id?: string | null
           to_location_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           from_location_id?: string | null
           id?: string
           moved_by?: string | null
@@ -5134,8 +5382,38 @@ export type Database = {
           serialized_part_id?: string | null
           ticket_id?: string | null
           to_location_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
           {
             foreignKeyName: "inventory_movements_from_location_id_fkey"
             columns: ["from_location_id"]
@@ -5444,6 +5722,34 @@ export type Database = {
             referencedRelation: "vw_reorder_alerts"
             referencedColumns: ["location_id"]
           },
+          {
+            foreignKeyName: "inventory_movements_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
         ]
       }
       inventory_reorder_policies: {
@@ -5584,6 +5890,7 @@ export type Database = {
           item_type: Database["public"]["Enums"]["invoice_line_item_type"]
           line_total: number
           part_id: string | null
+          payer_type: Database["public"]["Enums"]["payer_type"] | null
           project_billing_schedule_id: string | null
           project_id: string | null
           project_task_id: string | null
@@ -5605,6 +5912,7 @@ export type Database = {
           item_type: Database["public"]["Enums"]["invoice_line_item_type"]
           line_total: number
           part_id?: string | null
+          payer_type?: Database["public"]["Enums"]["payer_type"] | null
           project_billing_schedule_id?: string | null
           project_id?: string | null
           project_task_id?: string | null
@@ -5626,6 +5934,7 @@ export type Database = {
           item_type?: Database["public"]["Enums"]["invoice_line_item_type"]
           line_total?: number
           part_id?: string | null
+          payer_type?: Database["public"]["Enums"]["payer_type"] | null
           project_billing_schedule_id?: string | null
           project_id?: string | null
           project_task_id?: string | null
@@ -5899,6 +6208,7 @@ export type Database = {
           ticket_id: string | null
           total_amount: number
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           amount_paid?: number
@@ -5937,6 +6247,7 @@ export type Database = {
           ticket_id?: string | null
           total_amount?: number
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           amount_paid?: number
@@ -5975,6 +6286,7 @@ export type Database = {
           ticket_id?: string | null
           total_amount?: number
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -6320,6 +6632,34 @@ export type Database = {
             referencedRelation: "vw_tickets_on_hold_parts"
             referencedColumns: ["ticket_id"]
           },
+          {
+            foreignKeyName: "invoices_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "invoices_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "invoices_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
         ]
       }
       labor_rate_profile: {
@@ -6363,6 +6703,101 @@ export type Database = {
           standard_hours_end?: string | null
           standard_hours_start?: string | null
           standard_rate?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          notification_type: string
+          read_at: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          read_at?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
+        ]
+      }
+      organization_features: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          feature_key: string
+          id: string
+          is_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          feature_key: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          feature_key?: string
+          id?: string
+          is_enabled?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
@@ -7353,10 +7788,10 @@ export type Database = {
           asset_tag: string | null
           category: string | null
           created_at: string | null
+          created_by: string | null
           default_warranty_months: number | null
           description: string | null
           id: string
-          import_batch_id: string | null
           is_returnable: boolean
           is_serialized: boolean | null
           item_type: string
@@ -7374,6 +7809,7 @@ export type Database = {
           tool_category: string | null
           unit_price: number | null
           updated_at: string | null
+          updated_by: string | null
           vendor_part_number: string | null
           warranty_period_months: number | null
         }
@@ -7381,10 +7817,10 @@ export type Database = {
           asset_tag?: string | null
           category?: string | null
           created_at?: string | null
+          created_by?: string | null
           default_warranty_months?: number | null
           description?: string | null
           id?: string
-          import_batch_id?: string | null
           is_returnable?: boolean
           is_serialized?: boolean | null
           item_type?: string
@@ -7402,6 +7838,7 @@ export type Database = {
           tool_category?: string | null
           unit_price?: number | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_part_number?: string | null
           warranty_period_months?: number | null
         }
@@ -7409,10 +7846,10 @@ export type Database = {
           asset_tag?: string | null
           category?: string | null
           created_at?: string | null
+          created_by?: string | null
           default_warranty_months?: number | null
           description?: string | null
           id?: string
-          import_batch_id?: string | null
           is_returnable?: boolean
           is_serialized?: boolean | null
           item_type?: string
@@ -7430,16 +7867,38 @@ export type Database = {
           tool_category?: string | null
           unit_price?: number | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_part_number?: string | null
           warranty_period_months?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "parts_import_batch_id_fkey"
-            columns: ["import_batch_id"]
+            foreignKeyName: "parts_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "import_batches"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "parts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "parts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
           },
           {
             foreignKeyName: "parts_preferred_vendor_id_fkey"
@@ -7468,6 +7927,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_vendor_lead_time_metrics"
             referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "parts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "parts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "parts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
           },
         ]
       }
@@ -9541,6 +10028,7 @@ export type Database = {
           start_date: string
           status: Database["public"]["Enums"]["project_status"] | null
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           actual_cost?: number | null
@@ -9576,6 +10064,7 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["project_status"] | null
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           actual_cost?: number | null
@@ -9611,6 +10100,7 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["project_status"] | null
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -9773,6 +10263,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_sales_pipeline"
             referencedColumns: ["estimate_id"]
+          },
+          {
+            foreignKeyName: "projects_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "projects_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "projects_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
           },
         ]
       }
@@ -10124,6 +10642,7 @@ export type Database = {
           notes: string | null
           order_date: string | null
           po_number: string
+          po_source: string | null
           project_id: string | null
           shipping_amount: number | null
           status: Database["public"]["Enums"]["purchase_order_status"] | null
@@ -10133,6 +10652,7 @@ export type Database = {
           ticket_id: string | null
           total_amount: number | null
           updated_at: string | null
+          updated_by: string | null
           vendor_contract_id: string | null
           vendor_id: string
         }
@@ -10147,6 +10667,7 @@ export type Database = {
           notes?: string | null
           order_date?: string | null
           po_number: string
+          po_source?: string | null
           project_id?: string | null
           shipping_amount?: number | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
@@ -10156,6 +10677,7 @@ export type Database = {
           ticket_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_contract_id?: string | null
           vendor_id: string
         }
@@ -10170,6 +10692,7 @@ export type Database = {
           notes?: string | null
           order_date?: string | null
           po_number?: string
+          po_source?: string | null
           project_id?: string | null
           shipping_amount?: number | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
@@ -10179,6 +10702,7 @@ export type Database = {
           ticket_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_contract_id?: string | null
           vendor_id?: string
         }
@@ -10394,6 +10918,34 @@ export type Database = {
             referencedColumns: ["ticket_id"]
           },
           {
+            foreignKeyName: "purchase_orders_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
+          {
             foreignKeyName: "purchase_orders_vendor_contract_id_fkey"
             columns: ["vendor_contract_id"]
             isOneToOne: false
@@ -10602,6 +11154,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          permissions: string[] | null
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          permissions?: string[] | null
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          permissions?: string[] | null
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       serialized_parts: {
         Row: {
@@ -11134,8 +11710,6 @@ export type Database = {
           notes: string | null
           parts_discount_percent: number | null
           priority_level: Database["public"]["Enums"]["priority_level"] | null
-          resolution_time_hours: number | null
-          response_time_hours: number | null
           response_time_sla_hours: number | null
           start_date: string
           status: Database["public"]["Enums"]["service_contract_status"] | null
@@ -11173,8 +11747,6 @@ export type Database = {
           notes?: string | null
           parts_discount_percent?: number | null
           priority_level?: Database["public"]["Enums"]["priority_level"] | null
-          resolution_time_hours?: number | null
-          response_time_hours?: number | null
           response_time_sla_hours?: number | null
           start_date: string
           status?: Database["public"]["Enums"]["service_contract_status"] | null
@@ -11212,8 +11784,6 @@ export type Database = {
           notes?: string | null
           parts_discount_percent?: number | null
           priority_level?: Database["public"]["Enums"]["priority_level"] | null
-          resolution_time_hours?: number | null
-          response_time_hours?: number | null
           response_time_sla_hours?: number | null
           start_date?: string
           status?: Database["public"]["Enums"]["service_contract_status"] | null
@@ -11370,6 +11940,220 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_technician_truck_serialized"
             referencedColumns: ["technician_id"]
+          },
+        ]
+      }
+      spc_points: {
+        Row: {
+          created_at: string | null
+          id: string
+          measured_value: number
+          measurement_id: string | null
+          sequence: number | null
+          subgroup_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          measured_value: number
+          measurement_id?: string | null
+          sequence?: number | null
+          subgroup_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          measured_value?: number
+          measurement_id?: string | null
+          sequence?: number | null
+          subgroup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spc_points_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "spc_subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spc_rule_violations: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          acknowledgment_notes: string | null
+          characteristic_id: string
+          created_at: string | null
+          details: Json | null
+          detected_at: string
+          id: string
+          subgroup_id: string | null
+          violation_type: Database["public"]["Enums"]["spc_violation_type"]
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledgment_notes?: string | null
+          characteristic_id: string
+          created_at?: string | null
+          details?: Json | null
+          detected_at?: string
+          id?: string
+          subgroup_id?: string | null
+          violation_type: Database["public"]["Enums"]["spc_violation_type"]
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledgment_notes?: string | null
+          characteristic_id?: string
+          created_at?: string | null
+          details?: Json | null
+          detected_at?: string
+          id?: string
+          subgroup_id?: string | null
+          violation_type?: Database["public"]["Enums"]["spc_violation_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spc_rule_violations_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spc_rule_violations_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "spc_rule_violations_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "spc_rule_violations_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "spc_rule_violations_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "spc_subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spc_subgroups: {
+        Row: {
+          characteristic_id: string
+          created_at: string | null
+          equipment_asset_id: string | null
+          id: string
+          max_value: number | null
+          mean: number | null
+          min_value: number | null
+          n: number
+          operation_id: string | null
+          product_id: string | null
+          range_value: number | null
+          stddev: number | null
+          subgroup_ts: string
+          updated_at: string | null
+          work_center_id: string | null
+        }
+        Insert: {
+          characteristic_id: string
+          created_at?: string | null
+          equipment_asset_id?: string | null
+          id?: string
+          max_value?: number | null
+          mean?: number | null
+          min_value?: number | null
+          n?: number
+          operation_id?: string | null
+          product_id?: string | null
+          range_value?: number | null
+          stddev?: number | null
+          subgroup_ts?: string
+          updated_at?: string | null
+          work_center_id?: string | null
+        }
+        Update: {
+          characteristic_id?: string
+          created_at?: string | null
+          equipment_asset_id?: string | null
+          id?: string
+          max_value?: number | null
+          mean?: number | null
+          min_value?: number | null
+          n?: number
+          operation_id?: string | null
+          product_id?: string | null
+          range_value?: number | null
+          stddev?: number | null
+          subgroup_ts?: string
+          updated_at?: string | null
+          work_center_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spc_subgroups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "part_inventory_details"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "spc_subgroups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "part_inventory_summary"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "spc_subgroups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spc_subgroups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vw_part_cost_current"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "spc_subgroups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spc_subgroups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vw_reorder_alerts"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "spc_subgroups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tools"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -12024,6 +12808,159 @@ export type Database = {
           },
           {
             foreignKeyName: "ticket_charges_planned_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_on_hold_parts"
+            referencedColumns: ["ticket_id"]
+          },
+        ]
+      }
+      ticket_fees: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          fee_type: string
+          id: string
+          payer_type: Database["public"]["Enums"]["payer_type"] | null
+          ticket_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          fee_type: string
+          id?: string
+          payer_type?: Database["public"]["Enums"]["payer_type"] | null
+          ticket_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          fee_type?: string
+          id?: string
+          payer_type?: Database["public"]["Enums"]["payer_type"] | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_fees_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "customer_service_history"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_installation_history"
+            referencedColumns: ["installation_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_revenue_summary"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_ready_to_invoice"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rework_analysis"
+            referencedColumns: ["callback_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rework_analysis"
+            referencedColumns: ["original_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_sales_opportunities"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_scheduled_tickets_today"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_ticket_onsite_progress"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_in_progress_active"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_on_hold_issue"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_fees_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "vw_tickets_on_hold_parts"
@@ -13232,6 +14169,208 @@ export type Database = {
           },
         ]
       }
+      ticket_parts_used: {
+        Row: {
+          created_at: string | null
+          id: string
+          installed_by: string | null
+          notes: string | null
+          part_id: string
+          quantity: number
+          ticket_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          installed_by?: string | null
+          notes?: string | null
+          part_id: string
+          quantity?: number
+          ticket_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          installed_by?: string | null
+          notes?: string | null
+          part_id?: string
+          quantity?: number
+          ticket_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_parts_used_installed_by_fkey"
+            columns: ["installed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_installed_by_fkey"
+            columns: ["installed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_installed_by_fkey"
+            columns: ["installed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_installed_by_fkey"
+            columns: ["installed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "part_inventory_details"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "part_inventory_summary"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_part_cost_current"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_reorder_alerts"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "customer_service_history"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_installation_history"
+            referencedColumns: ["installation_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_revenue_summary"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_ready_to_invoice"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rework_analysis"
+            referencedColumns: ["callback_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rework_analysis"
+            referencedColumns: ["original_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_sales_opportunities"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_scheduled_tickets_today"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_ticket_onsite_progress"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_in_progress_active"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_on_hold_issue"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_on_hold_parts"
+            referencedColumns: ["ticket_id"]
+          },
+        ]
+      }
       ticket_photos: {
         Row: {
           caption: string | null
@@ -13920,6 +15059,12 @@ export type Database = {
         Row: {
           accepted_at: string | null
           actual_duration_minutes: number | null
+          ahs_authorization_date: string | null
+          ahs_covered_amount: number | null
+          ahs_diagnosis_fee_amount: number | null
+          ahs_dispatch_number: string | null
+          ahs_labor_rate_per_hour: number | null
+          ahs_portal_submission_date: string | null
           arrived_onsite_at: string | null
           assigned_to: string | null
           billable: boolean | null
@@ -13973,12 +15118,19 @@ export type Database = {
           ticket_type: Database["public"]["Enums"]["ticket_type"] | null
           title: string
           updated_at: string | null
+          updated_by: string | null
           urgent_review_flag: boolean | null
           work_started_at: string | null
         }
         Insert: {
           accepted_at?: string | null
           actual_duration_minutes?: number | null
+          ahs_authorization_date?: string | null
+          ahs_covered_amount?: number | null
+          ahs_diagnosis_fee_amount?: number | null
+          ahs_dispatch_number?: string | null
+          ahs_labor_rate_per_hour?: number | null
+          ahs_portal_submission_date?: string | null
           arrived_onsite_at?: string | null
           assigned_to?: string | null
           billable?: boolean | null
@@ -14032,12 +15184,19 @@ export type Database = {
           ticket_type?: Database["public"]["Enums"]["ticket_type"] | null
           title: string
           updated_at?: string | null
+          updated_by?: string | null
           urgent_review_flag?: boolean | null
           work_started_at?: string | null
         }
         Update: {
           accepted_at?: string | null
           actual_duration_minutes?: number | null
+          ahs_authorization_date?: string | null
+          ahs_covered_amount?: number | null
+          ahs_diagnosis_fee_amount?: number | null
+          ahs_dispatch_number?: string | null
+          ahs_labor_rate_per_hour?: number | null
+          ahs_portal_submission_date?: string | null
           arrived_onsite_at?: string | null
           assigned_to?: string | null
           billable?: boolean | null
@@ -14091,6 +15250,7 @@ export type Database = {
           ticket_type?: Database["public"]["Enums"]["ticket_type"] | null
           title?: string
           updated_at?: string | null
+          updated_by?: string | null
           urgent_review_flag?: boolean | null
           work_started_at?: string | null
         }
@@ -14402,6 +15562,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_sales_pipeline"
             referencedColumns: ["estimate_id"]
+          },
+          {
+            foreignKeyName: "tickets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "tickets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "tickets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
           },
         ]
       }
@@ -16033,7 +17221,6 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
-          import_batch_id: string | null
           internal_notes: string | null
           is_1099_eligible: boolean | null
           is_active: boolean | null
@@ -16056,6 +17243,7 @@ export type Database = {
           tax_id: string | null
           tax_id_number: string | null
           updated_at: string | null
+          updated_by: string | null
           vendor_code: string
           w9_verified: boolean | null
           website: string | null
@@ -16084,7 +17272,6 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
-          import_batch_id?: string | null
           internal_notes?: string | null
           is_1099_eligible?: boolean | null
           is_active?: boolean | null
@@ -16107,6 +17294,7 @@ export type Database = {
           tax_id?: string | null
           tax_id_number?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_code: string
           w9_verified?: boolean | null
           website?: string | null
@@ -16135,7 +17323,6 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
-          import_batch_id?: string | null
           internal_notes?: string | null
           is_1099_eligible?: boolean | null
           is_active?: boolean | null
@@ -16158,6 +17345,7 @@ export type Database = {
           tax_id?: string | null
           tax_id_number?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_code?: string
           w9_verified?: boolean | null
           website?: string | null
@@ -16221,11 +17409,32 @@ export type Database = {
             referencedColumns: ["technician_id"]
           },
           {
-            foreignKeyName: "vendors_import_batch_id_fkey"
-            columns: ["import_batch_id"]
+            foreignKeyName: "vendors_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
-            referencedRelation: "import_batches"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendors_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_admin_profile_diagnostics"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "vendors_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_inventory"
+            referencedColumns: ["technician_id"]
+          },
+          {
+            foreignKeyName: "vendors_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_technician_truck_serialized"
+            referencedColumns: ["technician_id"]
           },
         ]
       }
@@ -16294,258 +17503,77 @@ export type Database = {
           },
         ]
       }
-      warranty_claim_attachments: {
-        Row: {
-          claim_id: string
-          created_at: string | null
-          description: string | null
-          file_name: string
-          file_size: number | null
-          file_type: string | null
-          file_url: string
-          id: string
-          uploaded_by: string | null
-        }
-        Insert: {
-          claim_id: string
-          created_at?: string | null
-          description?: string | null
-          file_name: string
-          file_size?: number | null
-          file_type?: string | null
-          file_url: string
-          id?: string
-          uploaded_by?: string | null
-        }
-        Update: {
-          claim_id?: string
-          created_at?: string | null
-          description?: string | null
-          file_name?: string
-          file_size?: number | null
-          file_type?: string | null
-          file_url?: string
-          id?: string
-          uploaded_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "warranty_claim_attachments_claim_id_fkey"
-            columns: ["claim_id"]
-            isOneToOne: false
-            referencedRelation: "vw_warranty_claims_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warranty_claim_attachments_claim_id_fkey"
-            columns: ["claim_id"]
-            isOneToOne: false
-            referencedRelation: "warranty_claims"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warranty_claim_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warranty_claim_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "vw_admin_profile_diagnostics"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "warranty_claim_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "vw_technician_truck_inventory"
-            referencedColumns: ["technician_id"]
-          },
-          {
-            foreignKeyName: "warranty_claim_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "vw_technician_truck_serialized"
-            referencedColumns: ["technician_id"]
-          },
-        ]
-      }
       warranty_claims: {
         Row: {
-          approved_amount: number | null
-          claim_amount: number | null
+          approved_by: string | null
+          claim_date: string | null
           claim_number: string
-          claim_type: string
           created_at: string | null
-          created_by: string | null
-          description: string
-          equipment_id: string | null
-          failure_date: string | null
-          failure_description: string | null
           id: string
-          provider_claim_number: string | null
-          provider_contact: string | null
-          provider_email: string | null
-          provider_name: string
-          provider_phone: string | null
-          resolution_date: string | null
+          issue_description: string
           resolution_notes: string | null
-          review_date: string | null
-          reviewed_by: string | null
-          serialized_part_id: string | null
-          status: string
+          serialized_part_id: string
+          status: Database["public"]["Enums"]["warranty_status"] | null
           submitted_by: string | null
-          submitted_date: string | null
           ticket_id: string | null
           updated_at: string | null
+          warranty_record_id: string
         }
         Insert: {
-          approved_amount?: number | null
-          claim_amount?: number | null
+          approved_by?: string | null
+          claim_date?: string | null
           claim_number: string
-          claim_type: string
           created_at?: string | null
-          created_by?: string | null
-          description: string
-          equipment_id?: string | null
-          failure_date?: string | null
-          failure_description?: string | null
           id?: string
-          provider_claim_number?: string | null
-          provider_contact?: string | null
-          provider_email?: string | null
-          provider_name: string
-          provider_phone?: string | null
-          resolution_date?: string | null
+          issue_description: string
           resolution_notes?: string | null
-          review_date?: string | null
-          reviewed_by?: string | null
-          serialized_part_id?: string | null
-          status?: string
+          serialized_part_id: string
+          status?: Database["public"]["Enums"]["warranty_status"] | null
           submitted_by?: string | null
-          submitted_date?: string | null
           ticket_id?: string | null
           updated_at?: string | null
+          warranty_record_id: string
         }
         Update: {
-          approved_amount?: number | null
-          claim_amount?: number | null
+          approved_by?: string | null
+          claim_date?: string | null
           claim_number?: string
-          claim_type?: string
           created_at?: string | null
-          created_by?: string | null
-          description?: string
-          equipment_id?: string | null
-          failure_date?: string | null
-          failure_description?: string | null
           id?: string
-          provider_claim_number?: string | null
-          provider_contact?: string | null
-          provider_email?: string | null
-          provider_name?: string
-          provider_phone?: string | null
-          resolution_date?: string | null
+          issue_description?: string
           resolution_notes?: string | null
-          review_date?: string | null
-          reviewed_by?: string | null
-          serialized_part_id?: string | null
-          status?: string
+          serialized_part_id?: string
+          status?: Database["public"]["Enums"]["warranty_status"] | null
           submitted_by?: string | null
-          submitted_date?: string | null
           ticket_id?: string | null
           updated_at?: string | null
+          warranty_record_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "warranty_claims_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "warranty_claims_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "warranty_claims_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "warranty_claims_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "vw_admin_profile_diagnostics"
             referencedColumns: ["profile_id"]
           },
           {
-            foreignKeyName: "warranty_claims_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "warranty_claims_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "vw_technician_truck_inventory"
             referencedColumns: ["technician_id"]
           },
           {
-            foreignKeyName: "warranty_claims_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_technician_truck_serialized"
-            referencedColumns: ["technician_id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "customer_service_history"
-            referencedColumns: ["equipment_id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "equipment"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "equipment_installation_history"
-            referencedColumns: ["equipment_id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "equipment_with_installed_parts"
-            referencedColumns: ["equipment_id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "vw_warranty_tracking"
-            referencedColumns: ["equipment_id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "vw_admin_profile_diagnostics"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "vw_technician_truck_inventory"
-            referencedColumns: ["technician_id"]
-          },
-          {
-            foreignKeyName: "warranty_claims_reviewed_by_fkey"
-            columns: ["reviewed_by"]
+            foreignKeyName: "warranty_claims_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "vw_technician_truck_serialized"
             referencedColumns: ["technician_id"]
@@ -16710,6 +17738,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_tickets_on_hold_parts"
             referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "warranty_claims_warranty_record_id_fkey"
+            columns: ["warranty_record_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_with_installed_parts"
+            referencedColumns: ["warranty_id"]
+          },
+          {
+            foreignKeyName: "warranty_claims_warranty_record_id_fkey"
+            columns: ["warranty_record_id"]
+            isOneToOne: false
+            referencedRelation: "warranty_records"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -20262,6 +21304,177 @@ export type Database = {
           },
         ]
       }
+      vw_parts_usage_compat: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          part_id: string | null
+          quantity_used: number | null
+          recorded_by: string | null
+          ticket_id: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          part_id?: string | null
+          quantity_used?: number | null
+          recorded_by?: never
+          ticket_id?: string | null
+          unit_cost?: never
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          part_id?: string | null
+          quantity_used?: number | null
+          recorded_by?: never
+          ticket_id?: string | null
+          unit_cost?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "part_inventory_details"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "part_inventory_summary"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_part_cost_current"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_reorder_alerts"
+            referencedColumns: ["part_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "customer_service_history"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_installation_history"
+            referencedColumns: ["installation_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_revenue_summary"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_ready_to_invoice"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rework_analysis"
+            referencedColumns: ["callback_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rework_analysis"
+            referencedColumns: ["original_ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_sales_opportunities"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_scheduled_tickets_today"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_ticket_onsite_progress"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_in_progress_active"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_on_hold_issue"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vw_tickets_on_hold_parts"
+            referencedColumns: ["ticket_id"]
+          },
+        ]
+      }
       vw_problem_pareto: {
         Row: {
           avg_ticket_value: number | null
@@ -20500,13 +21713,6 @@ export type Database = {
           },
           {
             foreignKeyName: "tickets_problem_code_fkey"
-            columns: ["callback_problem"]
-            isOneToOne: false
-            referencedRelation: "standard_codes"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "tickets_problem_code_fkey"
             columns: ["original_problem"]
             isOneToOne: false
             referencedRelation: "standard_codes"
@@ -20516,7 +21722,7 @@ export type Database = {
             foreignKeyName: "tickets_problem_code_fkey"
             columns: ["callback_problem"]
             isOneToOne: false
-            referencedRelation: "vw_problem_pareto"
+            referencedRelation: "standard_codes"
             referencedColumns: ["code"]
           },
           {
@@ -20529,13 +21735,20 @@ export type Database = {
           {
             foreignKeyName: "tickets_problem_code_fkey"
             columns: ["callback_problem"]
+            isOneToOne: false
+            referencedRelation: "vw_problem_pareto"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "tickets_problem_code_fkey"
+            columns: ["original_problem"]
             isOneToOne: false
             referencedRelation: "vw_resolution_pareto"
             referencedColumns: ["code"]
           },
           {
             foreignKeyName: "tickets_problem_code_fkey"
-            columns: ["original_problem"]
+            columns: ["callback_problem"]
             isOneToOne: false
             referencedRelation: "vw_resolution_pareto"
             referencedColumns: ["code"]
@@ -21682,34 +22895,6 @@ export type Database = {
         }
         Relationships: []
       }
-      vw_warranty_claims_summary: {
-        Row: {
-          approved_amount: number | null
-          attachment_count: number | null
-          claim_amount: number | null
-          claim_number: string | null
-          claim_type: string | null
-          created_at: string | null
-          created_by_name: string | null
-          customer_name: string | null
-          description: string | null
-          equipment_manufacturer: string | null
-          equipment_model: string | null
-          equipment_type: string | null
-          failure_date: string | null
-          id: string | null
-          item_description: string | null
-          part_name: string | null
-          part_number: string | null
-          provider_claim_number: string | null
-          provider_name: string | null
-          resolution_date: string | null
-          serial_number: string | null
-          status: string | null
-          submitted_date: string | null
-        }
-        Relationships: []
-      }
       vw_warranty_tracking: {
         Row: {
           created_at: string | null
@@ -21946,10 +23131,15 @@ export type Database = {
       }
     }
     Functions: {
+      add_audit_columns: { Args: { target_table: string }; Returns: undefined }
       admin_update_user_password: {
         Args: { new_password: string; target_user_id: string }
         Returns: Json
       }
+      auth_has_role: { Args: { required_roles: string[] }; Returns: boolean }
+      auth_is_active: { Args: never; Returns: boolean }
+      auth_is_admin: { Args: never; Returns: boolean }
+      auth_is_admin_or_dispatcher: { Args: never; Returns: boolean }
       auto_match_bank_lines: {
         Args: { p_reconciliation_id: string }
         Returns: {
@@ -22046,7 +23236,52 @@ export type Database = {
           success: boolean
         }[]
       }
+      fn_adjust_inventory_canonical: {
+        Args: {
+          p_location_id: string
+          p_part_id: string
+          p_quantity_delta: number
+          p_unit_cost?: number
+        }
+        Returns: undefined
+      }
       fn_check_technician_setup: { Args: { p_user_id?: string }; Returns: Json }
+      fn_consume_material:
+        | {
+            Args: {
+              p_bom_item_id?: string
+              p_consumed_by?: string
+              p_lot_number?: string
+              p_method?: Database["public"]["Enums"]["consumption_method"]
+              p_operation_run_id?: string
+              p_part_id: string
+              p_production_order_id: string
+              p_production_step_id?: string
+              p_qty: number
+              p_serialized_part_id?: string
+              p_source_location_id: string
+              p_unit_cost?: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_bom_item_id?: string
+              p_consumed_by?: string
+              p_idempotency_key?: string
+              p_lot_number?: string
+              p_method?: Database["public"]["Enums"]["consumption_method"]
+              p_operation_run_id?: string
+              p_part_id: string
+              p_production_order_id: string
+              p_production_step_id?: string
+              p_qty: number
+              p_serialized_part_id?: string
+              p_source_location_id: string
+              p_unit_cost?: number
+            }
+            Returns: string
+          }
       fn_convert_estimate_to_project: {
         Args: { p_created_by?: string; p_estimate_id: string }
         Returns: Json
@@ -22070,6 +23305,10 @@ export type Database = {
           p_ticket_id?: string
         }
         Returns: Json
+      }
+      fn_generate_account_number: {
+        Args: { p_customer_type: Database["public"]["Enums"]["customer_type"] }
+        Returns: string
       }
       fn_generate_reorder_pos: {
         Args: { p_location_id?: string; p_vendor_id?: string }
@@ -22150,6 +23389,10 @@ export type Database = {
         Args: { p_tech_id: string; p_ticket_id: string }
         Returns: Json
       }
+      fn_submit_to_ahs_portal: {
+        Args: { p_ticket_id: string; p_user_id: string }
+        Returns: boolean
+      }
       fn_ticket_hold_for_parts: {
         Args: {
           p_notes: string
@@ -22184,12 +23427,15 @@ export type Database = {
       generate_gl_entry_number: { Args: never; Returns: string }
       generate_import_batch_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
+      generate_po_number: { Args: never; Returns: string }
       generate_prj_ticket_number: {
         Args: { p_project_id: string }
         Returns: string
       }
+      generate_production_order_number: { Args: never; Returns: string }
       generate_project_number: { Args: never; Returns: string }
       generate_svc_ticket_number: { Args: never; Returns: string }
+      generate_ticket_number: { Args: never; Returns: string }
       generate_vendor_code: { Args: never; Returns: string }
       generate_vendor_contract_number: { Args: never; Returns: string }
       generate_vendor_payment_number: { Args: never; Returns: string }
@@ -22366,6 +23612,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_dispatcher: { Args: never; Returns: boolean }
+      is_feature_enabled: { Args: { p_feature_key: string }; Returns: boolean }
       post_deposit_release_to_gl: {
         Args: { deposit_release_id_param: string }
         Returns: Json
@@ -22411,7 +23658,10 @@ export type Database = {
         | "cancelled"
       billing_type: "fixed_amount" | "percent_of_contract"
       calculation_method: "fixed_amount" | "percentage"
+      capa_status: "OPEN" | "IN_PROGRESS" | "VERIFIED" | "CLOSED"
       change_order_status: "pending" | "approved" | "rejected" | "implemented"
+      characteristic_type: "VARIABLE" | "ATTRIBUTE"
+      consumption_method: "scan" | "manual" | "backflush"
       contract_billing_frequency:
         | "annual"
         | "semi_annual"
@@ -22436,12 +23686,29 @@ export type Database = {
         | "response_time"
         | "other"
       coverage_type: "entire_site" | "equipment" | "system" | "zone"
+      customer_type: "residential" | "commercial" | "government"
+      data_capture_type: "numeric" | "pass_fail" | "count" | "text" | "photo"
       deduction_type:
         | "tax"
         | "insurance"
         | "retirement"
         | "garnishment"
         | "other"
+      disposition_type:
+        | "SCRAP"
+        | "REWORK"
+        | "USE_AS_IS"
+        | "RETURN_TO_VENDOR"
+        | "SORT_100"
+      downtime_category: "planned" | "unplanned"
+      downtime_group:
+        | "mechanical"
+        | "electrical"
+        | "material"
+        | "quality"
+        | "ops"
+        | "other"
+      equipment_state: "RUN" | "STOP" | "IDLE" | "CHANGEOVER" | "PLANNED_STOP"
       estimate_line_item_type:
         | "labor"
         | "parts"
@@ -22450,6 +23717,14 @@ export type Database = {
         | "other"
       estimate_pricing_tier: "good" | "better" | "best"
       estimate_status:
+        | "draft"
+        | "sent"
+        | "viewed"
+        | "accepted"
+        | "rejected"
+        | "expired"
+        | "converted"
+      estimate_status_enum:
         | "draft"
         | "sent"
         | "viewed"
@@ -22478,9 +23753,30 @@ export type Database = {
         | "rolled_back"
         | "cancelled"
       import_validation_status: "pending" | "valid" | "error"
+      inspection_applies_to:
+        | "PRODUCT"
+        | "OPERATION"
+        | "WORK_CENTER"
+        | "ASSET"
+        | "VENDOR_PART"
+      inspection_plan_type: "INCOMING" | "IN_PROCESS" | "FINAL" | "AUDIT"
+      inspection_run_status:
+        | "PENDING"
+        | "IN_PROGRESS"
+        | "PASSED"
+        | "FAILED"
+        | "WAIVED"
       invoice_line_item_type: "labor" | "part" | "travel" | "service" | "other"
       invoice_source_type: "SVC" | "PRJ" | "Mixed"
       invoice_status:
+        | "draft"
+        | "sent"
+        | "paid"
+        | "overdue"
+        | "cancelled"
+        | "partially_paid"
+        | "written_off"
+      invoice_status_enum:
         | "draft"
         | "sent"
         | "paid"
@@ -22510,8 +23806,17 @@ export type Database = {
         | "return"
         | "adjustment"
         | "disposal"
+      nc_severity: "MINOR" | "MAJOR" | "CRITICAL"
+      nc_source:
+        | "INSPECTION"
+        | "OPERATOR_REPORTED"
+        | "CUSTOMER_RETURN"
+        | "AUDIT"
+      nc_status: "OPEN" | "UNDER_REVIEW" | "DISPOSITIONED" | "CLOSED"
       normal_balance: "debit" | "credit"
       note_type: "general" | "diagnostic" | "customer" | "internal"
+      oee_grain: "hourly" | "shift" | "daily"
+      operation_run_status: "NOT_STARTED" | "RUNNING" | "PAUSED" | "COMPLETED"
       parts_coverage_level: "none" | "limited" | "full"
       pay_frequency: "weekly" | "bi_weekly" | "semi_monthly" | "monthly"
       payer_type: "AHS" | "CUSTOMER"
@@ -22522,10 +23827,33 @@ export type Database = {
         | "paid"
         | "cancelled"
       period_status: "open" | "closing" | "closed"
+      plant_hierarchy_level: "site" | "plant" | "area" | "line"
+      po_status_enum:
+        | "draft"
+        | "submitted"
+        | "approved"
+        | "partial"
+        | "received"
+        | "cancelled"
       pricing_basis: "list_price" | "standard_cost" | "market_index" | "other"
       priority_level: "normal" | "priority" | "vip"
+      production_order_status_enum:
+        | "draft"
+        | "planned"
+        | "released"
+        | "in_progress"
+        | "on_hold"
+        | "completed"
+        | "cancelled"
+        | "closed"
       project_issue_type: "issue" | "risk"
       project_status:
+        | "planning"
+        | "in_progress"
+        | "on_hold"
+        | "completed"
+        | "cancelled"
+      project_status_enum:
         | "planning"
         | "in_progress"
         | "on_hold"
@@ -22554,6 +23882,7 @@ export type Database = {
         | "completed"
       reorder_method: "rop" | "minmax"
       resource_type: "technician" | "part" | "equipment"
+      sampling_method: "100_PERCENT" | "EVERY_N" | "PER_LOT" | "AQL"
       serialized_part_status:
         | "in_stock"
         | "in_transit"
@@ -22568,6 +23897,19 @@ export type Database = {
         | "cancelled"
         | "suspended"
       setting_type: "number" | "text" | "boolean" | "date"
+      spc_violation_type:
+        | "WESTERN_ELECTRIC_1"
+        | "WESTERN_ELECTRIC_2"
+        | "WESTERN_ELECTRIC_3"
+        | "WESTERN_ELECTRIC_4"
+        | "NELSON_1"
+        | "NELSON_2"
+        | "NELSON_3"
+        | "NELSON_4"
+        | "NELSON_5"
+        | "NELSON_6"
+        | "NELSON_7"
+        | "NELSON_8"
       stock_location_type:
         | "warehouse"
         | "truck"
@@ -22591,10 +23933,24 @@ export type Database = {
         | "closed_billed"
         | "closed_no_charge"
         | "awaiting_ahs_authorization"
+      ticket_status_enum:
+        | "new"
+        | "scheduled"
+        | "in_progress"
+        | "on_hold"
+        | "completed"
+        | "cancelled"
+        | "invoiced"
       ticket_type: "PRJ" | "SVC" | "WARRANTY_AHS"
       time_log_status: "active" | "completed" | "approved" | "rejected"
       time_log_type: "regular" | "overtime" | "travel" | "on_site" | "break"
-      user_role: "admin" | "dispatcher" | "technician"
+      user_role:
+        | "admin"
+        | "dispatcher"
+        | "technician"
+        | "material_handler"
+        | "supervisor"
+        | "operator"
       vendor_contract_status:
         | "draft"
         | "active"
@@ -22767,7 +24123,10 @@ export const Constants = {
       ],
       billing_type: ["fixed_amount", "percent_of_contract"],
       calculation_method: ["fixed_amount", "percentage"],
+      capa_status: ["OPEN", "IN_PROGRESS", "VERIFIED", "CLOSED"],
       change_order_status: ["pending", "approved", "rejected", "implemented"],
+      characteristic_type: ["VARIABLE", "ATTRIBUTE"],
+      consumption_method: ["scan", "manual", "backflush"],
       contract_billing_frequency: [
         "annual",
         "semi_annual",
@@ -22795,6 +24154,8 @@ export const Constants = {
         "other",
       ],
       coverage_type: ["entire_site", "equipment", "system", "zone"],
+      customer_type: ["residential", "commercial", "government"],
+      data_capture_type: ["numeric", "pass_fail", "count", "text", "photo"],
       deduction_type: [
         "tax",
         "insurance",
@@ -22802,6 +24163,23 @@ export const Constants = {
         "garnishment",
         "other",
       ],
+      disposition_type: [
+        "SCRAP",
+        "REWORK",
+        "USE_AS_IS",
+        "RETURN_TO_VENDOR",
+        "SORT_100",
+      ],
+      downtime_category: ["planned", "unplanned"],
+      downtime_group: [
+        "mechanical",
+        "electrical",
+        "material",
+        "quality",
+        "ops",
+        "other",
+      ],
+      equipment_state: ["RUN", "STOP", "IDLE", "CHANGEOVER", "PLANNED_STOP"],
       estimate_line_item_type: [
         "labor",
         "parts",
@@ -22811,6 +24189,15 @@ export const Constants = {
       ],
       estimate_pricing_tier: ["good", "better", "best"],
       estimate_status: [
+        "draft",
+        "sent",
+        "viewed",
+        "accepted",
+        "rejected",
+        "expired",
+        "converted",
+      ],
+      estimate_status_enum: [
         "draft",
         "sent",
         "viewed",
@@ -22842,9 +24229,33 @@ export const Constants = {
         "cancelled",
       ],
       import_validation_status: ["pending", "valid", "error"],
+      inspection_applies_to: [
+        "PRODUCT",
+        "OPERATION",
+        "WORK_CENTER",
+        "ASSET",
+        "VENDOR_PART",
+      ],
+      inspection_plan_type: ["INCOMING", "IN_PROCESS", "FINAL", "AUDIT"],
+      inspection_run_status: [
+        "PENDING",
+        "IN_PROGRESS",
+        "PASSED",
+        "FAILED",
+        "WAIVED",
+      ],
       invoice_line_item_type: ["labor", "part", "travel", "service", "other"],
       invoice_source_type: ["SVC", "PRJ", "Mixed"],
       invoice_status: [
+        "draft",
+        "sent",
+        "paid",
+        "overdue",
+        "cancelled",
+        "partially_paid",
+        "written_off",
+      ],
+      invoice_status_enum: [
         "draft",
         "sent",
         "paid",
@@ -22878,8 +24289,18 @@ export const Constants = {
         "adjustment",
         "disposal",
       ],
+      nc_severity: ["MINOR", "MAJOR", "CRITICAL"],
+      nc_source: [
+        "INSPECTION",
+        "OPERATOR_REPORTED",
+        "CUSTOMER_RETURN",
+        "AUDIT",
+      ],
+      nc_status: ["OPEN", "UNDER_REVIEW", "DISPOSITIONED", "CLOSED"],
       normal_balance: ["debit", "credit"],
       note_type: ["general", "diagnostic", "customer", "internal"],
+      oee_grain: ["hourly", "shift", "daily"],
+      operation_run_status: ["NOT_STARTED", "RUNNING", "PAUSED", "COMPLETED"],
       parts_coverage_level: ["none", "limited", "full"],
       pay_frequency: ["weekly", "bi_weekly", "semi_monthly", "monthly"],
       payer_type: ["AHS", "CUSTOMER"],
@@ -22891,10 +24312,36 @@ export const Constants = {
         "cancelled",
       ],
       period_status: ["open", "closing", "closed"],
+      plant_hierarchy_level: ["site", "plant", "area", "line"],
+      po_status_enum: [
+        "draft",
+        "submitted",
+        "approved",
+        "partial",
+        "received",
+        "cancelled",
+      ],
       pricing_basis: ["list_price", "standard_cost", "market_index", "other"],
       priority_level: ["normal", "priority", "vip"],
+      production_order_status_enum: [
+        "draft",
+        "planned",
+        "released",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled",
+        "closed",
+      ],
       project_issue_type: ["issue", "risk"],
       project_status: [
+        "planning",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled",
+      ],
+      project_status_enum: [
         "planning",
         "in_progress",
         "on_hold",
@@ -22927,6 +24374,7 @@ export const Constants = {
       ],
       reorder_method: ["rop", "minmax"],
       resource_type: ["technician", "part", "equipment"],
+      sampling_method: ["100_PERCENT", "EVERY_N", "PER_LOT", "AQL"],
       serialized_part_status: [
         "in_stock",
         "in_transit",
@@ -22943,6 +24391,20 @@ export const Constants = {
         "suspended",
       ],
       setting_type: ["number", "text", "boolean", "date"],
+      spc_violation_type: [
+        "WESTERN_ELECTRIC_1",
+        "WESTERN_ELECTRIC_2",
+        "WESTERN_ELECTRIC_3",
+        "WESTERN_ELECTRIC_4",
+        "NELSON_1",
+        "NELSON_2",
+        "NELSON_3",
+        "NELSON_4",
+        "NELSON_5",
+        "NELSON_6",
+        "NELSON_7",
+        "NELSON_8",
+      ],
       stock_location_type: [
         "warehouse",
         "truck",
@@ -22969,10 +24431,26 @@ export const Constants = {
         "closed_no_charge",
         "awaiting_ahs_authorization",
       ],
+      ticket_status_enum: [
+        "new",
+        "scheduled",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled",
+        "invoiced",
+      ],
       ticket_type: ["PRJ", "SVC", "WARRANTY_AHS"],
       time_log_status: ["active", "completed", "approved", "rejected"],
       time_log_type: ["regular", "overtime", "travel", "on_site", "break"],
-      user_role: ["admin", "dispatcher", "technician"],
+      user_role: [
+        "admin",
+        "dispatcher",
+        "technician",
+        "material_handler",
+        "supervisor",
+        "operator",
+      ],
       vendor_contract_status: [
         "draft",
         "active",
