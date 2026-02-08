@@ -1,7 +1,30 @@
 import { supabase } from '../lib/supabase';
+import type { Enums } from '../lib/dbTypes';
 
 export type JobType = 'project' | 'ticket' | 'both';
 export type JobStatus = 'all' | 'open' | 'in_progress' | 'completed' | 'closed';
+
+// Map generic JobStatus to actual project statuses
+function mapToProjectStatus(status: JobStatus): Enums<'project_status'> | null {
+  switch (status) {
+    case 'open': return 'planning'; // Map 'open' to 'planning' for projects
+    case 'in_progress': return 'in_progress';
+    case 'completed': return 'completed';
+    case 'closed': return 'completed'; // Map 'closed' to 'completed' for projects
+    default: return null;
+  }
+}
+
+// Map generic JobStatus to actual ticket statuses
+function mapToTicketStatus(status: JobStatus): Enums<'ticket_status'> | null {
+  switch (status) {
+    case 'open': return 'open';
+    case 'in_progress': return 'in_progress';
+    case 'completed': return 'completed';
+    case 'closed': return 'closed_billed'; // Map 'closed' to 'closed_billed' for tickets
+    default: return null;
+  }
+}
 
 export interface JobPLFilters {
   startDate: string;
@@ -145,7 +168,10 @@ export class JobPLService {
       .order('project_number', { ascending: false });
 
     if (jobStatus !== 'all') {
-      query = query.eq('status', jobStatus);
+      const mappedStatus = mapToProjectStatus(jobStatus);
+      if (mappedStatus) {
+        query = query.eq('status', mappedStatus);
+      }
     }
 
     if (customerId) {
@@ -217,7 +243,10 @@ export class JobPLService {
       .order('ticket_number', { ascending: false });
 
     if (jobStatus !== 'all') {
-      query = query.eq('status', jobStatus);
+      const mappedStatus = mapToTicketStatus(jobStatus);
+      if (mappedStatus) {
+        query = query.eq('status', mappedStatus);
+      }
     }
 
     if (customerId) {
@@ -432,7 +461,6 @@ export class JobPLService {
       .select(
         `
         quantity,
-        unit_cost,
         created_at,
         part_id,
         parts!inner(id, unit_price, part_inventory(unit_cost))
@@ -445,9 +473,9 @@ export class JobPLService {
     if (!usageError && partsUsed && partsUsed.length > 0) {
       let totalCost = 0;
       for (const usage of partsUsed) {
-        // Use unit_cost from ticket_parts_used if available, otherwise fall back
-        const unitCost = usage.unit_cost ? parseFloat(String(usage.unit_cost)) : this.getPartCost(usage);
-        totalCost += parseFloat(String(usage.quantity || 0)) * unitCost;
+        // Get unit_cost from parts relationship
+        const unitCost = this.getPartCost(usage);
+        totalCost += (usage.quantity || 0) * unitCost;
       }
       return totalCost;
     }
@@ -503,7 +531,6 @@ export class JobPLService {
       .select(
         `
         quantity,
-        unit_cost,
         created_at,
         part_id,
         parts!inner(unit_price)
@@ -516,11 +543,9 @@ export class JobPLService {
     if (!usageError && partsUsed && partsUsed.length > 0) {
       let totalCost = 0;
       for (const usage of partsUsed) {
-        // Use unit_cost from ticket_parts_used if available, otherwise look it up
-        const unitCost = usage.unit_cost
-          ? parseFloat(String(usage.unit_cost))
-          : await this.getPartCostById(usage.part_id);
-        totalCost += parseFloat(String(usage.quantity || 0)) * unitCost;
+        // Look up unit_cost from part_inventory
+        const unitCost = await this.getPartCostById(usage.part_id);
+        totalCost += (usage.quantity || 0) * unitCost;
       }
       return totalCost;
     }

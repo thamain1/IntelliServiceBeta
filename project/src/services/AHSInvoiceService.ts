@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { AHSSettingsService } from './AHSSettingsService';
 import { AHSTicketService } from './AHSTicketService';
+import type { TablesInsert } from '../lib/dbTypes';
 
 export interface BillingBreakdown {
   ahsTotal: number;
@@ -46,13 +47,13 @@ export class AHSInvoiceService {
       const result = Array.isArray(data) ? data[0] : data;
 
       return {
-        ahsTotal: parseFloat(result?.ahs_total) || 0,
-        customerTotal: parseFloat(result?.customer_total) || 0,
-        diagnosisFee: parseFloat(result?.diagnosis_fee) || 0,
-        ahsLabor: parseFloat(result?.ahs_labor) || 0,
-        ahsParts: parseFloat(result?.ahs_parts) || 0,
-        customerLabor: parseFloat(result?.customer_labor) || 0,
-        customerParts: parseFloat(result?.customer_parts) || 0,
+        ahsTotal: Number(result?.ahs_total) || 0,
+        customerTotal: Number(result?.customer_total) || 0,
+        diagnosisFee: Number(result?.diagnosis_fee) || 0,
+        ahsLabor: Number(result?.ahs_labor) || 0,
+        ahsParts: Number(result?.ahs_parts) || 0,
+        customerLabor: Number(result?.customer_labor) || 0,
+        customerParts: Number(result?.customer_parts) || 0,
       };
     } catch (error) {
       console.error('Error in getTicketBillingBreakdown:', error);
@@ -124,7 +125,7 @@ export class AHSInvoiceService {
         .eq('estimate.ticket_id', ticketId);
 
       // Calculate line items
-      const lineItems: any[] = [];
+      const lineItems: Omit<TablesInsert<'invoice_line_items'>, 'invoice_id'>[] = [];
       let sortOrder = 0;
 
       // Add diagnosis fee as first line item
@@ -144,12 +145,13 @@ export class AHSInvoiceService {
       // Add AHS-payer line items from estimate
       if (estimateItems && estimateItems.length > 0) {
         for (const item of estimateItems) {
+          const itemType = (item.item_type || 'service') as TablesInsert<'invoice_line_items'>['item_type'];
           lineItems.push({
-            description: item.description,
-            item_type: item.item_type,
+            description: item.description || 'Line Item',
+            item_type: itemType,
             quantity: item.quantity || 1,
-            unit_price: item.unit_price,
-            line_total: item.line_total,
+            unit_price: item.unit_price || 0,
+            line_total: item.line_total || 0,
             part_id: item.part_id,
             payer_type: 'AHS',
             sort_order: sortOrder++,
@@ -174,19 +176,26 @@ export class AHSInvoiceService {
       const invoiceNumber = await this.generateInvoiceNumber();
 
       // Create invoice
+      const today = new Date().toISOString().split('T')[0];
+      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Net 30
+
+      const invoiceData: TablesInsert<'invoices'> = {
+        invoice_number: invoiceNumber,
+        customer_id: defaults.billToCustomerId,
+        source_ticket_id: ticketId,
+        subtotal,
+        tax_amount: 0,
+        total_amount: subtotal,
+        status: 'draft',
+        notes: `AHS Warranty - Dispatch #${ticket.ahs_dispatch_number || 'N/A'} - Ticket ${ticket.ticket_number}`,
+        created_by: userId,
+        issue_date: today,
+        due_date: dueDate,
+      };
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
-        .insert({
-          invoice_number: invoiceNumber,
-          customer_id: defaults.billToCustomerId,
-          source_ticket_id: ticketId,
-          subtotal,
-          tax: 0,
-          total: subtotal,
-          status: 'draft',
-          notes: `AHS Warranty - Dispatch #${ticket.ahs_dispatch_number || 'N/A'} - Ticket ${ticket.ticket_number}`,
-          created_by: userId,
-        })
+        .insert(invoiceData)
         .select()
         .single();
 
@@ -297,17 +306,20 @@ export class AHSInvoiceService {
       }
 
       // Build line items
-      const lineItems = estimateItems.map((item, index) => ({
-        description: item.description,
-        item_type: item.item_type,
-        quantity: item.quantity || 1,
-        unit_price: item.unit_price,
-        line_total: item.line_total,
-        part_id: item.part_id,
-        payer_type: 'CUSTOMER',
-        sort_order: index,
-        ticket_id: ticketId,
-      }));
+      const lineItems: Omit<TablesInsert<'invoice_line_items'>, 'invoice_id'>[] = estimateItems.map((item, index) => {
+        const itemType = (item.item_type || 'service') as TablesInsert<'invoice_line_items'>['item_type'];
+        return {
+          description: item.description || 'Line Item',
+          item_type: itemType,
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          line_total: item.line_total || 0,
+          part_id: item.part_id,
+          payer_type: 'CUSTOMER' as const,
+          sort_order: index,
+          ticket_id: ticketId,
+        };
+      });
 
       // Calculate totals
       const subtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
@@ -316,19 +328,35 @@ export class AHSInvoiceService {
       const invoiceNumber = await this.generateInvoiceNumber();
 
       // Create invoice
+      const today = new Date().toISOString().split('T')[0];
+      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Net 30
+
+      if (!ticket.customer_id) {
+        return {
+          success: false,
+          invoiceId: null,
+          invoiceNumber: null,
+          error: 'Ticket has no customer assigned',
+        };
+      }
+
+      const invoiceData: TablesInsert<'invoices'> = {
+        invoice_number: invoiceNumber,
+        customer_id: ticket.customer_id,
+        source_ticket_id: ticketId,
+        subtotal,
+        tax_amount: 0,
+        total_amount: subtotal,
+        status: 'draft',
+        notes: `Customer responsibility - AHS Warranty Ticket ${ticket.ticket_number}`,
+        created_by: userId,
+        issue_date: today,
+        due_date: dueDate,
+      };
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
-        .insert({
-          invoice_number: invoiceNumber,
-          customer_id: ticket.customer_id,
-          source_ticket_id: ticketId,
-          subtotal,
-          tax: 0,
-          total: subtotal,
-          status: 'draft',
-          notes: `Customer responsibility - AHS Warranty Ticket ${ticket.ticket_number}`,
-          created_by: userId,
-        })
+        .insert(invoiceData)
         .select()
         .single();
 
@@ -401,10 +429,9 @@ export class AHSInvoiceService {
           id,
           invoice_number,
           customer_id,
-          total,
+          total_amount,
           status,
-          created_at,
-          customer:customers(company_name)
+          created_at
         `)
         .or(`ticket_id.eq.${ticketId},source_ticket_id.eq.${ticketId}`)
         .order('created_at', { ascending: false });
