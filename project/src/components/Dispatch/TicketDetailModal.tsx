@@ -68,6 +68,9 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
     summary: '',
   });
 
+  const [plannedParts, setPlannedParts] = useState<any[]>([]);
+  const [plannedLabor, setPlannedLabor] = useState<any[]>([]);
+
   useEffect(() => {
     if (isOpen && ticketId) {
       loadTicket();
@@ -84,7 +87,9 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
           *,
           customers!tickets_customer_id_fkey(name, phone, address, city, state),
           profiles!tickets_assigned_to_fkey(full_name),
-          equipment(model_number, manufacturer, equipment_type, serial_number)
+          equipment(model_number, manufacturer, equipment_type, serial_number),
+          ticket_parts_planned(*, parts(part_number, name)),
+          ticket_labor_planned(*)
         `)
         .eq('id', ticketId)
         .maybeSingle();
@@ -92,6 +97,8 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
       if (error) throw error;
       if (data) {
         setTicket(data);
+        setPlannedParts(data.ticket_parts_planned || []);
+        setPlannedLabor(data.ticket_labor_planned || []);
         setHoursOnsite(data.hours_onsite?.toString() || '');
         setStatus(data.status);
         setProblemCode((data as any).problem_code || null);
@@ -757,6 +764,53 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
                 </p>
               </div>
             </div>
+
+            {/* Planned Work & Materials (From Estimate) */}
+            {(plannedParts.length > 0 || plannedLabor.length > 0) && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center">
+                  <Package className="w-4 h-4 mr-2" />
+                  Planned Work & Materials
+                </h4>
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Item</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Description</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Qty/Hrs</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {plannedParts.map((part) => (
+                        <tr key={part.id}>
+                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 mr-2">
+                              Part
+                            </span>
+                            {part.parts?.part_number || 'Custom Part'}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{part.description}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-white text-right">{part.quantity}</td>
+                        </tr>
+                      ))}
+                      {plannedLabor.map((labor) => (
+                        <tr key={labor.id}>
+                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 mr-2">
+                              Labor
+                            </span>
+                            Labor
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{labor.description}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-white text-right">{labor.labor_hours} hrs</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* AHS Warranty Panel */}
             {AHSTicketService.isAHSTicket(ticket.ticket_type) && (
