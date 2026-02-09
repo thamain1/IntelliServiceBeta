@@ -58,10 +58,11 @@ export class GeocodingService {
           }
         });
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GeocodingService] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to geocode address';
       throw {
-        message: error.message || 'Failed to geocode address',
+        message: errorMessage,
         status: 'UNKNOWN_ERROR',
       } as GeocodingError;
     }
@@ -124,9 +125,10 @@ export class GeocodingService {
       if (updateError) throw updateError;
 
       return { success: true, result };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GeocodingService] Error geocoding customer:', error);
-      return { success: false, error: error.message || 'Failed to geocode customer' };
+      const errorMessage = error instanceof Error ? error.message : 'Failed to geocode customer';
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -223,10 +225,11 @@ export class GeocodingService {
           }
         );
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GeocodingService] Reverse geocode error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reverse geocode';
       throw {
-        message: error.message || 'Failed to reverse geocode',
+        message: errorMessage,
         status: 'UNKNOWN_ERROR',
       } as GeocodingError;
     }

@@ -79,6 +79,7 @@ export function TimeClockView() {
     }, 1000);
 
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterDate, showAllUsers]);
 
   // Auto-resume location sharing if already clocked in
@@ -87,6 +88,7 @@ export function TimeClockView() {
       console.log('[TimeClockView] Already clocked in, auto-resuming location sharing');
       startLocationSharing();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLog, profile]);
 
   // Cleanup location sharing on unmount
@@ -114,7 +116,7 @@ export function TimeClockView() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setTimeLogs((data as any) || []);
+      setTimeLogs((data as unknown as TimeLog[]) || []);
     } catch (error) {
       console.error('Error loading time logs:', error);
     } finally {
@@ -136,7 +138,7 @@ export function TimeClockView() {
         .maybeSingle();
 
       if (error) throw error;
-      setActiveLog((data as any));
+      setActiveLog((data as unknown as TimeLog));
     } catch (error) {
       console.error('Error checking active log:', error);
     }

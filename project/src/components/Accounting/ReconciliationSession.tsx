@@ -47,6 +47,7 @@ export function ReconciliationSession({
 
   useEffect(() => {
     loadReconciliationData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reconciliationId]);
 
   const loadReconciliationData = async () => {
@@ -69,9 +70,10 @@ export function ReconciliationSession({
         glData.filter((e) => e.reconciliation_id === reconciliationId).map((e) => e.id)
       );
       setSelectedEntries(clearedIds);
-    } catch (error: any) {
-      console.error('Error loading reconciliation:', error);
-      alert('Failed to load reconciliation: ' + error.message);
+    } catch (error: unknown) {
+      const err = error as unknown as Error;
+      console.error('Error loading reconciliation:', err);
+      alert('Failed to load reconciliation: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -100,9 +102,10 @@ export function ReconciliationSession({
 
       // Reload to get updated balances
       await loadReconciliationData();
-    } catch (error: any) {
-      console.error('Error toggling entry:', error);
-      alert('Failed to update entry: ' + error.message);
+    } catch (error: unknown) {
+      const err = error as unknown as Error;
+      console.error('Error toggling entry:', err);
+      alert('Failed to update entry: ' + err.message);
     }
   };
 
@@ -132,9 +135,10 @@ export function ReconciliationSession({
       alert('Reconciliation completed successfully!');
       if (onComplete) onComplete();
       onClose();
-    } catch (error: any) {
-      console.error('Error completing reconciliation:', error);
-      alert('Failed to complete reconciliation: ' + error.message);
+    } catch (error: unknown) {
+      const err = error as unknown as Error;
+      console.error('Error completing reconciliation:', err);
+      alert('Failed to complete reconciliation: ' + err.message);
     } finally {
       setActionInProgress(null);
     }
@@ -147,9 +151,10 @@ export function ReconciliationSession({
       await ReconciliationService.cancelReconciliation(reconciliationId);
       if (onComplete) onComplete();
       onClose();
-    } catch (error: any) {
-      console.error('Error cancelling reconciliation:', error);
-      alert('Failed to cancel reconciliation: ' + error.message);
+    } catch (error: unknown) {
+      const err = error as unknown as Error;
+      console.error('Error cancelling reconciliation:', err);
+      alert('Failed to cancel reconciliation: ' + err.message);
     } finally {
       setActionInProgress(null);
     }

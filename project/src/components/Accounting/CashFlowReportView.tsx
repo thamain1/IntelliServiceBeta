@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Calendar, Download, RefreshCw, AlertCircle } from 'lucide-react';
 import { CashFlowService, CashFlowStatement } from '../../services/CashFlowService';
 
@@ -22,25 +22,25 @@ export function CashFlowReportView({ onExportPDF }: CashFlowReportViewProps) {
     setEndDate(lastDayOfMonth.toISOString().split('T')[0]);
   }, []);
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      loadCashFlowStatement();
-    }
-  }, [startDate, endDate]);
-
-  const loadCashFlowStatement = async () => {
+  const loadCashFlowStatement = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await CashFlowService.getCashFlowStatement(startDate, endDate);
       setStatement(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading cash flow statement:', err);
-      setError(err.message || 'Failed to load cash flow statement');
+      setError(err instanceof Error ? err.message : 'Failed to load cash flow statement');
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      loadCashFlowStatement();
+    }
+  }, [startDate, endDate, loadCashFlowStatement]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

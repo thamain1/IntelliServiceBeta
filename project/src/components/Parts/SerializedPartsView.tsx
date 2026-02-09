@@ -29,12 +29,14 @@ export function SerializedPartsView({ itemType = 'part' }: SerializedPartsViewPr
 
   useEffect(() => {
     loadSerializedParts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, itemType]);
 
   const loadSerializedParts = async () => {
     try {
+      // Using type assertion to handle complex query with inner join
       let query = (supabase
-        .from('serialized_parts') as any)
+        .from('serialized_parts') as unknown as { select: (s: string) => ReturnType<typeof supabase.from> })
         .select(`
           *,
           parts!inner(name, part_number, item_type),
@@ -56,7 +58,7 @@ export function SerializedPartsView({ itemType = 'part' }: SerializedPartsViewPr
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSerializedParts((data || []) as any);
+      setSerializedParts((data || []) as SerializedPart[]);
     } catch (error) {
       console.error('Error loading serialized parts:', error);
     } finally {
@@ -269,7 +271,7 @@ export function SerializedPartsView({ itemType = 'part' }: SerializedPartsViewPr
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                      {part.unit_cost ? `$${parseFloat(part.unit_cost as any).toFixed(2)}` : '-'}
+                      {part.unit_cost ? `$${parseFloat(String(part.unit_cost)).toFixed(2)}` : '-'}
                     </td>
                   </tr>
                 ))

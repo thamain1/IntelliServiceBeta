@@ -58,10 +58,11 @@ export function CompanySettings() {
 
       if (error) throw error;
 
-      const loadedSettings = { ...DEFAULT_SETTINGS };
+      const loadedSettings: CompanySettingsData = { ...DEFAULT_SETTINGS };
       data?.forEach((setting) => {
-        if (setting.setting_key in loadedSettings) {
-          (loadedSettings as any)[setting.setting_key] = setting.setting_value || '';
+        const key = setting.setting_key as keyof CompanySettingsData;
+        if (key in loadedSettings) {
+          loadedSettings[key] = setting.setting_value || '';
         }
       });
 
@@ -94,8 +95,8 @@ export function CompanySettings() {
             .eq('setting_key', key);
         } else {
           await supabase
-            .from('accounting_settings' as any)
-            .insert({ setting_key: key, setting_value: value } as any);
+            .from('accounting_settings')
+            .insert({ setting_key: key, setting_value: value });
         }
       }
 

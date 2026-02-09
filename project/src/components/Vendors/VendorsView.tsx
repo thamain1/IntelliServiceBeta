@@ -10,6 +10,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { NewVendorModal } from './NewVendorModal';
 import { VendorDetailModal } from './VendorDetailModal';
@@ -71,6 +72,7 @@ export function VendorsView({ initialTab = 'list', onViewChange }: VendorsViewPr
 
   useEffect(() => {
     filterVendors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendors, searchTerm, statusFilter, preferredFilter]);
 
   const loadVendors = async () => {
@@ -81,7 +83,7 @@ export function VendorsView({ initialTab = 'list', onViewChange }: VendorsViewPr
         .order('display_name');
 
       if (error) throw error;
-      setVendors((data as any) || []);
+      setVendors((data as unknown as Vendor[]) || []);
     } catch (error) {
       console.error('Error loading vendors:', error);
     } finally {
@@ -115,7 +117,7 @@ export function VendorsView({ initialTab = 'list', onViewChange }: VendorsViewPr
   };
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, { className: string; icon: any }> = {
+    const badges: Record<string, { className: string; icon: LucideIcon }> = {
       active: { className: 'badge badge-green', icon: CheckCircle },
       pending: { className: 'badge badge-yellow', icon: Clock },
       on_hold: { className: 'badge badge-orange', icon: AlertCircle },

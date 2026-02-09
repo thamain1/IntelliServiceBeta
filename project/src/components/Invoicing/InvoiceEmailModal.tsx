@@ -22,6 +22,7 @@ export function InvoiceEmailModal({ invoiceId, onClose, onSent }: InvoiceEmailMo
 
   useEffect(() => {
     loadInvoiceData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceId]);
 
   const loadInvoiceData = async () => {
@@ -62,7 +63,7 @@ export function InvoiceEmailModal({ invoiceId, onClose, onSent }: InvoiceEmailMo
           onClose();
         }, 2000);
       }
-    } catch (error) {
+    } catch (_error) {
       setResult({ success: false, message: 'Failed to send email. Please try again.' });
     } finally {
       setSending(false);

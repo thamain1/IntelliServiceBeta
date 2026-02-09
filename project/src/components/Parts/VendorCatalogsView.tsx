@@ -20,6 +20,7 @@ export function VendorCatalogsView() {
   useEffect(() => {
     loadVendors();
     loadCatalogItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVendor, preferredOnly]);
 
   const loadVendors = async () => {

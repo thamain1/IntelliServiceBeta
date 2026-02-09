@@ -49,12 +49,13 @@ export function EstimatesView({ onViewEstimate, onCreateEstimate }: EstimatesVie
 
   useEffect(() => {
     filterEstimates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estimates, searchTerm, statusFilter]);
 
   const loadEstimates = async () => {
     try {
       const { data, error } = await (supabase
-        .from('estimates') as any)
+        .from('estimates') as unknown as ReturnType<typeof supabase.from>)
         .select(`
           *,
           customers(name),
@@ -63,7 +64,7 @@ export function EstimatesView({ onViewEstimate, onCreateEstimate }: EstimatesVie
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEstimates((data as unknown as any[]) || []);
+      setEstimates((data as unknown as Estimate[]) || []);
     } catch (error) {
       console.error('Error loading estimates:', error);
     } finally {

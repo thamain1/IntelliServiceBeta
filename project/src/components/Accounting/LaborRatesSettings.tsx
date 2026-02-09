@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DollarSign, Clock, AlertCircle, Save, Info } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import type { Tables } from '../../lib/dbTypes';
 
 type AccountingSetting = {
   id: string;
@@ -29,11 +30,7 @@ export function LaborRatesSettings() {
     standard_hours_end: '17:00:00',
   });
 
-  useEffect(() => {
-    loadLaborRates();
-  }, []);
-
-  const loadLaborRates = async () => {
+  const loadLaborRates = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('accounting_settings')
@@ -50,7 +47,7 @@ export function LaborRatesSettings() {
 
       if (data) {
         const settingsMap: Record<string, AccountingSetting> = {};
-        data.forEach((setting: any) => {
+        (data as unknown as Tables<'accounting_settings'>[]).forEach((setting) => {
           settingsMap[setting.setting_key] = setting;
         });
         setSettings(settingsMap);
@@ -68,7 +65,11 @@ export function LaborRatesSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadLaborRates();
+  }, [loadLaborRates]);
 
   const handleSave = async () => {
     setSaving(true);

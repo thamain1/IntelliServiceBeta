@@ -1,4 +1,12 @@
 import { supabase } from '../lib/supabase';
+import { Tables, Enums } from '../lib/dbTypes';
+import { Json } from '../lib/database.types';
+
+// Type alias for notification row from database
+type NotificationRow = Tables<'notifications'>;
+
+// Type alias for user role enum
+type UserRole = Enums<'user_role'>;
 
 export interface Notification {
   id: string;
@@ -6,7 +14,7 @@ export interface Notification {
   notificationType: string;
   title: string;
   message: string;
-  metadata: Record<string, any>;
+  metadata: Json;
   readAt: string | null;
   createdAt: string;
 }
@@ -16,7 +24,7 @@ export interface NotificationCreate {
   notificationType: string;
   title: string;
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Json;
 }
 
 export class NotificationService {
@@ -224,7 +232,7 @@ export class NotificationService {
       const { data: users, error: usersError } = await supabase
         .from('profiles')
         .select('id')
-        .in('role', roles as any);
+        .in('role', roles as unknown as UserRole[]);
 
       if (usersError) {
         console.error('Error fetching users for broadcast:', usersError);
@@ -251,7 +259,7 @@ export class NotificationService {
   /**
    * Map database record to Notification interface
    */
-  private static mapNotification(record: any): Notification {
+  private static mapNotification(record: NotificationRow): Notification {
     return {
       id: record.id,
       userId: record.user_id,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Save, Building2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import type { TablesInsert } from '../../lib/dbTypes';
 
 interface NewVendorModalProps {
   onClose: () => void;
@@ -74,16 +75,17 @@ export function NewVendorModal({ onClose, onSuccess }: NewVendorModalProps) {
       };
 
       const { error: vendorError } = await supabase
-        .from('vendors' as any)
-        .insert([vendorData] as any);
+        .from('vendors')
+        .insert([vendorData as unknown as TablesInsert<'vendors'>]);
 
       if (vendorError) throw vendorError;
 
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating vendor:', error);
-      alert('Error creating vendor: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert('Error creating vendor: ' + errorMessage);
     } finally {
       setLoading(false);
     }

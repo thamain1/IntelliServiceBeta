@@ -1,5 +1,30 @@
 import { supabase } from '../lib/supabase';
-import type { Enums } from '../lib/dbTypes';
+import type { Enums, Tables } from '../lib/dbTypes';
+
+// Composite types for Supabase joins
+type ProjectWithCustomer = Tables<'projects'> & {
+  customers: { name: string } | null;
+};
+
+type TicketWithRelations = Tables<'tickets'> & {
+  customers: { name: string } | null;
+  customer_locations: { location_name: string } | null;
+};
+
+type TicketWithProfile = Tables<'tickets'> & {
+  profiles: { labor_cost_per_hour: number | null } | null;
+};
+
+type PartUsageWithParts = {
+  quantity: number | null;
+  created_at: string | null;
+  part_id: string;
+  parts: {
+    id: string;
+    unit_price: number | null;
+    part_inventory: { unit_cost: number | null }[];
+  } | null;
+};
 
 export type JobType = 'project' | 'ticket' | 'both';
 export type JobStatus = 'all' | 'open' | 'in_progress' | 'completed' | 'closed';
@@ -201,7 +226,7 @@ export class JobPLService {
         job_name: project.name,
         job_type: 'Project',
         customer_id: project.customer_id,
-        customer_name: (project.customers as any)?.name || 'Unknown',
+        customer_name: (project as unknown as ProjectWithCustomer).customers?.name || 'Unknown',
         status: project.status || '',
         site_name: project.location || undefined,
         revenue,
@@ -226,8 +251,8 @@ export class JobPLService {
     jobStatus: JobStatus,
     customerId?: string
   ): Promise<JobPLLine[]> {
-    let query = (supabase
-      .from('tickets') as any)
+    let query = supabase
+      .from('tickets')
       .select(
         `
         id,
@@ -280,9 +305,9 @@ export class JobPLService {
         job_name: ticket.title,
         job_type: 'Service Ticket',
         customer_id: ticket.customer_id,
-        customer_name: (ticket.customers as any)?.name || 'Unknown',
+        customer_name: (ticket as unknown as TicketWithRelations).customers?.name || 'Unknown',
         status: ticket.status || '',
-        site_name: (ticket.customer_locations as any)?.location_name || undefined,
+        site_name: (ticket as unknown as TicketWithRelations).customer_locations?.location_name || undefined,
         revenue,
         labor_cost: laborCost,
         parts_cost: partsCost,
@@ -375,7 +400,7 @@ export class JobPLService {
     let totalCost = 0;
     for (const ticket of tickets || []) {
       const hours = parseFloat(String(ticket.hours_onsite || 0));
-      const costRate = parseFloat(String((ticket.profiles as any)?.labor_cost_per_hour || 45));
+      const costRate = parseFloat(String((ticket as unknown as TicketWithProfile).profiles?.labor_cost_per_hour || 45));
       totalCost += hours * costRate;
     }
 
@@ -431,7 +456,7 @@ export class JobPLService {
     }
 
     const hours = parseFloat(String(ticket.hours_onsite || 0));
-    const costRate = parseFloat(String((ticket.profiles as any)?.labor_cost_per_hour || 45));
+    const costRate = parseFloat(String((ticket as unknown as TicketWithProfile).profiles?.labor_cost_per_hour || 45));
 
     return hours * costRate;
   }
@@ -590,7 +615,7 @@ export class JobPLService {
   /**
    * Get part cost from part_inventory, fallback to parts.unit_price
    */
-  private static getPartCost(usage: any): number {
+  private static getPartCost(usage: PartUsageWithParts): number {
     // Check if part_inventory exists through the parts relationship
     if (usage.parts?.part_inventory && Array.isArray(usage.parts.part_inventory) && usage.parts.part_inventory.length > 0) {
       const inventory = usage.parts.part_inventory[0];

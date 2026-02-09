@@ -105,6 +105,7 @@ export function CallMapGoogle({
     if (map) {
       updateMarkers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, activeTickets, technicians, showTickets, showTechnicians]);
 
   // Center on selected technician
@@ -150,14 +151,15 @@ export function CallMapGoogle({
 
       console.log('Map instance created successfully');
       setMap(newMap);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error initializing map:', err);
+      const error = err as { message?: string; stack?: string; name?: string };
       console.error('Error details:', {
-        message: err.message,
-        stack: err.stack,
-        name: err.name
+        message: error.message,
+        stack: error.stack,
+        name: error.name
       });
-      setError(err.message || 'Failed to load Google Maps. Check console for details.');
+      setError(error.message || 'Failed to load Google Maps. Check console for details.');
     } finally {
       setLoading(false);
     }

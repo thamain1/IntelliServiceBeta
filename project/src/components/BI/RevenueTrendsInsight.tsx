@@ -20,6 +20,9 @@ interface DailyRevenue {
   invoiceCount: number;
 }
 
+type TooltipFormatterValue = [string, string] | [number, string];
+type TooltipFormatter = (value: number, name?: string) => TooltipFormatterValue;
+
 export function RevenueTrendsInsight() {
   const { dateRange, setDateRange, start, end } = useBIDateRange();
   const [metrics, setMetrics] = useState<RevenueMetrics>({
@@ -33,6 +36,7 @@ export function RevenueTrendsInsight() {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadMetrics = async () => {
@@ -242,7 +246,7 @@ export function RevenueTrendsInsight() {
                     }}
                     itemStyle={{ color: '#F9FAFB' }}
                     labelStyle={{ color: '#F9FAFB' }}
-                    formatter={((value: number) => [`$${value.toLocaleString()}`, 'Revenue']) as any}
+                    formatter={((value: number) => [`$${value.toLocaleString()}`, 'Revenue']) as unknown as TooltipFormatter}
                   />
                   <Area
                     type="monotone"
@@ -290,7 +294,7 @@ export function RevenueTrendsInsight() {
                     }}
                     itemStyle={{ color: '#F9FAFB' }}
                     labelStyle={{ color: '#F9FAFB' }}
-                    formatter={((value: number) => [value, 'Invoices']) as any}
+                    formatter={((value: number) => [value, 'Invoices']) as unknown as TooltipFormatter}
                   />
                   <Bar dataKey="invoiceCount" fill="#10B981" radius={[4, 4, 0, 0]} />
                 </BarChart>

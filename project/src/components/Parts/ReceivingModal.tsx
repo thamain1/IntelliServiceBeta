@@ -3,7 +3,9 @@ import { X, Package, MapPin, Hash, Calendar, CheckCircle, Ticket } from 'lucide-
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
-type PurchaseOrder = Database['public']['Tables']['purchase_orders']['Row'];
+type PurchaseOrder = Database['public']['Tables']['purchase_orders']['Row'] & {
+  vendors?: { name: string } | null;
+};
 type PurchaseOrderLine = Database['public']['Tables']['purchase_order_lines']['Row'];
 type Part = Database['public']['Tables']['parts']['Row'];
 type StockLocation = Database['public']['Tables']['stock_locations']['Row'];
@@ -11,7 +13,7 @@ type StockLocation = Database['public']['Tables']['stock_locations']['Row'];
 interface LinkedTicketInfo {
   ticket_number: string;
   title: string;
-  customer_name: string;
+  customers?: { name: string } | null;
 }
 
 interface POLineWithPart extends Omit<PurchaseOrderLine, 'linked_ticket_id' | 'linked_request_id'> {
@@ -19,7 +21,7 @@ interface POLineWithPart extends Omit<PurchaseOrderLine, 'linked_ticket_id' | 'l
   quantity_received_total?: number;
   linked_ticket_id?: string | null;
   linked_request_id?: string | null;
-  linked_ticket?: LinkedTicketInfo | null;
+  tickets?: LinkedTicketInfo | null;
 }
 
 interface ReceivingItem {
@@ -48,6 +50,7 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchaseOrderId]);
 
   const loadData = async () => {
@@ -60,8 +63,8 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
           .select('*, vendors(*)')
           .eq('id', purchaseOrderId)
           .single(),
-        (supabase
-          .from('purchase_order_lines') as any)
+        supabase
+          .from('purchase_order_lines')
           .select('*, parts(*), tickets!purchase_order_lines_linked_ticket_id_fkey(ticket_number, title, customers(name))')
           .eq('po_id', purchaseOrderId)
           .order('line_number'),
@@ -77,11 +80,11 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
       if (locationsResult.error) throw locationsResult.error;
 
       setPO(poResult.data);
-      setLines(linesResult.data as POLineWithPart[]);
+      setLines(linesResult.data as unknown as POLineWithPart[]);
       setStockLocations(locationsResult.data);
 
       const initialData: Record<string, ReceivingItem> = {};
-      linesResult.data.forEach((line: any) => {
+      linesResult.data.forEach((line) => {
         initialData[line.id] = {
           line_id: line.id,
           quantity_received: line.quantity_ordered,
@@ -101,7 +104,7 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
     }
   };
 
-  const updateReceivingItem = (lineId: string, field: keyof ReceivingItem, value: any) => {
+  const updateReceivingItem = (lineId: string, field: keyof ReceivingItem, value: string | number | string[]) => {
     setReceivingData((prev) => ({
       ...prev,
       [lineId]: {
@@ -211,9 +214,10 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
 
       alert('Parts received successfully!');
       onComplete();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error receiving parts:', error);
-      const errorMessage = error?.message || error?.hint || 'Failed to receive parts. Please try again.';
+      const err = error as { message?: string; hint?: string };
+      const errorMessage = err?.message || err?.hint || 'Failed to receive parts. Please try again.';
       alert(`Error: ${errorMessage}`);
     } finally {
       setSaving(false);
@@ -240,7 +244,7 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Receive Parts</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              PO: {po.po_number} | Vendor: {(po as any).vendors?.name}
+              PO: {po.po_number} | Vendor: {po.vendors?.name}
             </p>
           </div>
           <button
@@ -296,18 +300,18 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
                 </div>
 
                 {/* Show linked ticket info if present */}
-                {line.linked_ticket_id && (line as any).tickets && (
+                {line.tickets && (
                   <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                     <div className="flex items-center space-x-2">
                       <Ticket className="w-4 h-4 text-green-600" />
                       <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                        Parts for Ticket: {(line as any).tickets?.ticket_number}
+                        Parts for Ticket: {line.tickets.ticket_number}
                       </span>
                     </div>
                     <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                      {(line as any).tickets?.title}
-                      {(line as any).tickets?.customers?.name && (
-                        <span className="ml-2">• {(line as any).tickets?.customers?.name}</span>
+                      {line.tickets.title}
+                      {line.tickets.customers?.name && (
+                        <span className="ml-2">• {line.tickets.customers.name}</span>
                       )}
                     </p>
                     <p className="text-xs text-green-600 dark:text-green-500 mt-1">

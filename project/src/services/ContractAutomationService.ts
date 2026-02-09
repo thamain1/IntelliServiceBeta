@@ -1,5 +1,14 @@
 import { supabase } from '../lib/supabase';
-import type { Enums } from '../lib/dbTypes';
+import type { Enums, Tables } from '../lib/dbTypes';
+
+// Composite types for joined queries
+type ServiceContractWithCustomer = Tables<'service_contracts'> & {
+  customers: { name: string; email: string | null } | null;
+};
+
+type ServiceContractWithCustomerName = Tables<'service_contracts'> & {
+  customers: { name: string } | null;
+};
 
 export interface ContractRenewalReminder {
   contract_id: string;
@@ -84,18 +93,21 @@ export class ContractAutomationService {
 
     if (error) throw error;
 
-    return (data || []).map((contract: any) => ({
-      contract_id: contract.id,
-      contract_name: contract.name,
-      customer_name: contract.customers?.name || 'Unknown',
-      customer_email: contract.customers?.email || null,
-      end_date: contract.end_date,
-      days_until_expiry: Math.ceil(
-        (new Date(contract.end_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      ),
-      base_fee: contract.base_fee || 0,
-      status: contract.status,
-    }));
+    return (data || []).map((contract) => {
+      const typedContract = contract as unknown as ServiceContractWithCustomer;
+      return {
+        contract_id: typedContract.id,
+        contract_name: typedContract.name,
+        customer_name: typedContract.customers?.name || 'Unknown',
+        customer_email: typedContract.customers?.email || null,
+        end_date: typedContract.end_date || '',
+        days_until_expiry: Math.ceil(
+          (new Date(typedContract.end_date || '').getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        ),
+        base_fee: typedContract.base_fee || 0,
+        status: typedContract.status,
+      };
+    });
   }
 
   /**
@@ -170,10 +182,11 @@ export class ContractAutomationService {
 
       const totalTickets = tickets?.length || 0;
 
+      const typedContract = contract as unknown as ServiceContractWithCustomerName;
       metrics.push({
-        contract_id: contract.id,
-        contract_name: contract.name,
-        customer_name: (contract as any).customers?.name || 'Unknown',
+        contract_id: typedContract.id,
+        contract_name: typedContract.name,
+        customer_name: typedContract.customers?.name || 'Unknown',
         response_time_target_hours: responseTimeTarget,
         resolution_time_target_hours: resolutionTimeTarget,
         total_tickets: totalTickets,
@@ -223,14 +236,15 @@ export class ContractAutomationService {
     const completedVisits = tickets?.filter((t) => t.status === 'completed').length || 0;
     const totalRevenue = invoices?.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0) || 0;
 
+    const typedContract = contract as unknown as ServiceContractWithCustomerName;
     return {
-      contract_id: contract.id,
-      contract_name: contract.name,
-      customer_name: (contract as any).customers?.name || 'Unknown',
-      start_date: contract.start_date,
-      end_date: contract.end_date || '',
+      contract_id: typedContract.id,
+      contract_name: typedContract.name,
+      customer_name: typedContract.customers?.name || 'Unknown',
+      start_date: typedContract.start_date,
+      end_date: typedContract.end_date || '',
       total_visits: totalVisits,
-      scheduled_visits: contract.included_visits_per_year || 0,
+      scheduled_visits: typedContract.included_visits_per_year || 0,
       completed_visits: completedVisits,
       total_revenue: totalRevenue,
       total_parts_cost: 0, // Would need parts tracking per contract
@@ -365,9 +379,10 @@ export class ContractAutomationService {
         .eq('id', contractId);
 
       return { success: true, newContractId: newContractData.id };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[ContractAutomation] Renewal error:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: message };
     }
   }
 
@@ -411,9 +426,10 @@ export class ContractAutomationService {
       if (error) throw error;
 
       return { success: true, contractId: data.id };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[ContractAutomation] Create from plan error:', error);
-      return { success: false, error: error.message };
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: message };
     }
   }
 

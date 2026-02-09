@@ -49,6 +49,7 @@ export function NewBillModal({ isOpen, onClose, onBillCreated, preselectedVendor
       loadAccounts();
       resetForm();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   useEffect(() => {
@@ -126,7 +127,7 @@ export function NewBillModal({ isOpen, onClose, onBillCreated, preselectedVendor
     }
   };
 
-  const updateLineItem = (index: number, field: keyof BillLineItem, value: any) => {
+  const updateLineItem = (index: number, field: keyof BillLineItem, value: string | number | undefined) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
 
@@ -192,9 +193,9 @@ export function NewBillModal({ isOpen, onClose, onBillCreated, preselectedVendor
 
       onBillCreated();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create bill:', err);
-      setError(err.message || 'Failed to create bill');
+      setError((err as Error).message || 'Failed to create bill');
     } finally {
       setLoading(false);
     }

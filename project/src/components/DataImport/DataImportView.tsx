@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Upload, AlertCircle, CheckCircle, Clock, XCircle, Eye, Ban } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Upload, AlertCircle, CheckCircle, Clock, XCircle, Eye, Ban, LucideIcon } from 'lucide-react';
 import { DataImportService, ImportBatch, ImportEntityType } from '../../services/DataImportService';
 import { ImportWizard } from './ImportWizard';
 import { BatchDetailView } from './BatchDetailView';
@@ -11,11 +11,7 @@ export function DataImportView() {
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<ImportEntityType | 'all'>('all');
 
-  useEffect(() => {
-    loadImports();
-  }, [filterType]);
-
-  const loadImports = async () => {
+  const loadImports = useCallback(async () => {
     setLoading(true);
     try {
       const data = filterType === 'all'
@@ -27,13 +23,17 @@ export function DataImportView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterType]);
+
+  useEffect(() => {
+    loadImports();
+  }, [loadImports]);
 
   const getStatusBadge = (status: string, importBatch: ImportBatch) => {
     // Use phase for more accurate status display
     const phaseStatus = importBatch.phase || status;
 
-    const badges: { [key: string]: { icon: any; color: string; label: string } } = {
+    const badges: { [key: string]: { icon: LucideIcon; color: string; label: string } } = {
       uploading: { icon: Clock, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300', label: 'Uploading' },
       mapping: { icon: Clock, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300', label: 'Mapping' },
       pending: { icon: Clock, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300', label: 'Pending' },
@@ -112,7 +112,7 @@ export function DataImportView() {
         </label>
         <select
           value={filterType}
-          onChange={(e) => setFilterType(e.target.value as any)}
+          onChange={(e) => setFilterType(e.target.value as unknown as ImportEntityType | 'all')}
           className="input text-sm"
         >
           <option value="all">All Types</option>

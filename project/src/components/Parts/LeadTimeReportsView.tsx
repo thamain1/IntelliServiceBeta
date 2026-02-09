@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Clock, CheckCircle, AlertCircle, Package } from 'lucide-react';
 import { PartsOrderingService, VendorLeadTimeMetrics } from '../../services/PartsOrderingService';
 import { supabase } from '../../lib/supabase';
@@ -14,10 +14,26 @@ export function LeadTimeReportsView() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selectedVendor, setSelectedVendor] = useState('all');
 
+  const loadMetrics = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const data = await PartsOrderingService.getVendorLeadTimeMetrics({
+        vendorId: selectedVendor !== 'all' ? selectedVendor : undefined,
+      });
+
+      setMetrics(data);
+    } catch (error) {
+      console.error('Error loading lead time metrics:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedVendor]);
+
   useEffect(() => {
     loadVendors();
     loadMetrics();
-  }, [selectedVendor]);
+  }, [selectedVendor, loadMetrics]);
 
   const loadVendors = async () => {
     try {
@@ -31,22 +47,6 @@ export function LeadTimeReportsView() {
       setVendors(data || []);
     } catch (error) {
       console.error('Error loading vendors:', error);
-    }
-  };
-
-  const loadMetrics = async () => {
-    try {
-      setLoading(true);
-
-      const data = await PartsOrderingService.getVendorLeadTimeMetrics({
-        vendorId: selectedVendor !== 'all' ? selectedVendor : undefined,
-      });
-
-      setMetrics(data);
-    } catch (error) {
-      console.error('Error loading lead time metrics:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

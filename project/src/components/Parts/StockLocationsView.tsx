@@ -34,12 +34,14 @@ export function StockLocationsView({ itemType = 'part' }: StockLocationsViewProp
 
   useEffect(() => {
     loadLocations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (selectedLocation) {
       loadInventory(selectedLocation.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLocation, itemType]);
 
   const loadLocations = async () => {

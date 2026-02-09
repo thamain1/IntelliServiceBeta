@@ -33,6 +33,7 @@ export function TransactionMatcher({
 
   useEffect(() => {
     loadSuggestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reconciliationId]);
 
   const loadSuggestions = async () => {
@@ -59,9 +60,9 @@ export function TransactionMatcher({
       setSelectedGLEntry(null);
       onRefresh();
       loadSuggestions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Match failed:', error);
-      alert('Failed to match: ' + error.message);
+      alert('Failed to match: ' + (error as Error).message);
     } finally {
       setMatching(false);
     }
@@ -89,9 +90,9 @@ export function TransactionMatcher({
       alert(`Auto-matched ${matched} transactions`);
       onRefresh();
       loadSuggestions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Auto-match failed:', error);
-      alert('Auto-match failed: ' + error.message);
+      alert('Auto-match failed: ' + (error as Error).message);
     } finally {
       setMatching(false);
     }
@@ -102,9 +103,9 @@ export function TransactionMatcher({
       await ReconciliationService.unmatchBankLine(bankLineId);
       onRefresh();
       loadSuggestions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Unmatch failed:', error);
-      alert('Failed to unmatch: ' + error.message);
+      alert('Failed to unmatch: ' + (error as Error).message);
     }
   };
 
@@ -118,9 +119,9 @@ export function TransactionMatcher({
       );
       onRefresh();
       loadSuggestions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to apply suggestion:', error);
-      alert('Failed to match: ' + error.message);
+      alert('Failed to match: ' + (error as Error).message);
     } finally {
       setMatching(false);
     }

@@ -143,9 +143,10 @@ export class GeolocationService {
 
       if (error) throw error;
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GeolocationService] Error saving location:', error);
-      return { success: false, error: error.message };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -169,8 +170,11 @@ export class GeolocationService {
       const position = await this.getCurrentPosition();
       await this.saveLocation(technicianId, position);
       onUpdate?.(position);
-    } catch (error: any) {
-      onError?.(error);
+    } catch (error: unknown) {
+      const geoError: GeolocationError = error instanceof Error
+        ? { code: -1, message: error.message }
+        : (error as unknown as GeolocationError);
+      onError?.(geoError);
       return false;
     }
 
@@ -184,8 +188,11 @@ export class GeolocationService {
         } else {
           onError?.({ code: -1, message: result.error || 'Failed to save location' });
         }
-      } catch (error: any) {
-        onError?.(error);
+      } catch (error: unknown) {
+        const geoError: GeolocationError = error instanceof Error
+          ? { code: -1, message: error.message }
+          : (error as unknown as GeolocationError);
+        onError?.(geoError);
       }
     }, intervalMs);
 

@@ -32,6 +32,7 @@ export function BillsView({ onNewBill, onViewBill, onRecordPayment }: BillsViewP
   useEffect(() => {
     loadData();
     loadVendors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const loadData = async () => {

@@ -2,6 +2,16 @@ import { supabase } from '../lib/supabase';
 import { NotificationService } from './NotificationService';
 import { AHSTicketService } from './AHSTicketService';
 import { AHSInvoiceService } from './AHSInvoiceService';
+import { Tables } from '../lib/dbTypes';
+
+// Composite type for estimate with joined customer and ticket data
+type EstimateWithJoins = Pick<
+  Tables<'estimates'>,
+  'id' | 'estimate_number' | 'total_amount' | 'accepted_date' | 'converted_to_ticket_id' | 'updated_by'
+> & {
+  customer: Pick<Tables<'customers'>, 'name'> | null;
+  ticket: Pick<Tables<'tickets'>, 'ticket_number' | 'ticket_type'> | null;
+};
 
 export interface EstimateAcceptanceDetails {
   estimateId: string;
@@ -23,7 +33,7 @@ export class EstimateNotificationService {
    */
   static async onEstimateAccepted(
     estimateId: string,
-    _acceptedBy?: string
+    acceptedBy?: string
   ): Promise<void> {
     try {
       // Get estimate details
@@ -78,6 +88,7 @@ export class EstimateNotificationService {
           isAHSTicket: details.isAHSTicket,
           ahsCoveredAmount,
           customerResponsibility,
+          acceptedBy: acceptedBy || details.acceptedBy,
         },
       });
 
@@ -95,7 +106,7 @@ export class EstimateNotificationService {
    */
   static async onEstimateDeclined(
     estimateId: string,
-    _declinedBy?: string,
+    declinedBy?: string,
     reason?: string
   ): Promise<void> {
     try {
@@ -121,6 +132,7 @@ export class EstimateNotificationService {
           customerName: details.customerName,
           total: details.total,
           reason,
+          declinedBy,
         },
       });
     } catch (error) {
@@ -136,15 +148,21 @@ export class EstimateNotificationService {
   ): Promise<EstimateAcceptanceDetails | null> {
     try {
       const { data, error } = await (supabase
-        .from('estimates') as any)
+        .from('estimates') as unknown as {
+          select: (query: string) => {
+            eq: (column: string, value: string) => {
+              maybeSingle: () => Promise<{ data: EstimateWithJoins | null; error: Error | null }>;
+            };
+          };
+        })
         .select(`
           id,
           estimate_number,
           total_amount,
-          accepted_at,
-          decision_by,
-          ticket_id,
-          customer:customers(company_name),
+          accepted_date,
+          updated_by,
+          converted_to_ticket_id,
+          customer:customers(name),
           ticket:tickets(ticket_number, ticket_type)
         `)
         .eq('id', estimateId)
@@ -155,18 +173,18 @@ export class EstimateNotificationService {
         return null;
       }
 
-      const customer = (data as any)?.customer as any;
-      const ticket = (data as any)?.ticket as any;
+      const customer = data.customer;
+      const ticket = data.ticket;
 
       return {
-        estimateId: (data as any)?.id,
-        estimateNumber: (data as any)?.estimate_number,
-        ticketId: (data as any)?.ticket_id,
+        estimateId: data.id,
+        estimateNumber: data.estimate_number,
+        ticketId: data.converted_to_ticket_id,
         ticketNumber: ticket?.ticket_number || null,
-        customerName: customer?.company_name || 'Unknown Customer',
-        total: (data as any)?.total_amount || 0,
-        acceptedAt: (data as any)?.accepted_at || new Date().toISOString(),
-        acceptedBy: (data as any)?.decision_by,
+        customerName: customer?.name || 'Unknown Customer',
+        total: data.total_amount || 0,
+        acceptedAt: data.accepted_date || new Date().toISOString(),
+        acceptedBy: data.updated_by,
         isAHSTicket: AHSTicketService.isAHSTicket(ticket?.ticket_type),
         ahsCoveredAmount: null,
         customerResponsibility: null,

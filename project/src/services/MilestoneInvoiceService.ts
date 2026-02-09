@@ -1,4 +1,10 @@
 import { supabase } from '../lib/supabase';
+import { Tables } from '../lib/dbTypes';
+
+// Composite type for joined invoice line item with invoices
+type InvoiceLineItemWithInvoice = Tables<'invoice_line_items'> & {
+  invoices: Tables<'invoices'>;
+};
 
 export interface CreateMilestoneInvoiceParams {
   milestoneId: string;
@@ -158,7 +164,7 @@ export class MilestoneInvoiceService {
       throw new Error('No deposit invoices found for this project');
     }
 
-    const firstDepositInvoice = depositInvoices[0].invoices as any;
+    const firstDepositInvoice = (depositInvoices[0] as unknown as InvoiceLineItemWithInvoice).invoices;
     const firstDepositLineItem = depositInvoices[0];
 
     const { data: depositRelease, error: releaseError } = await supabase

@@ -1,6 +1,14 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
+import { InvoiceLineItemRow } from '../lib/dbTypes';
+
+// Type for jsPDF extended with autoTable's lastAutoTable property
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable: {
+    finalY: number;
+  };
+}
 
 export interface InvoiceEmailData {
   invoiceId: string;
@@ -91,7 +99,7 @@ export class InvoiceEmailService {
     });
 
     // Totals
-    const finalY = (doc as any).lastAutoTable.finalY || 80;
+    const finalY = (doc as unknown as jsPDFWithAutoTable).lastAutoTable.finalY || 80;
 
     doc.setFontSize(10);
     const totalsX = pageWidth - 70;
@@ -199,7 +207,7 @@ Your Company`,
       }
 
       throw new Error(result?.error || 'Failed to send email');
-    } catch (error) {
+    } catch (_error) {
       // Edge function not available or failed, use mailto fallback
       console.log('Edge function not available, falling back to mailto');
       return this.openMailtoLink(data, composition);
@@ -278,7 +286,7 @@ Your Company`,
         customerEmail: customer?.email || '',
         totalAmount: invoice.total_amount,
         dueDate: invoice.due_date,
-        lineItems: (lineItems || []).map((item: any) => ({
+        lineItems: (lineItems || []).map((item: InvoiceLineItemRow) => ({
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,

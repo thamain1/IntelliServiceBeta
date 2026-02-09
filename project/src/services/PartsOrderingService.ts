@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { Views, TablesInsert } from '../lib/dbTypes';
 
 export interface VendorCatalogItem {
   catalogItemId: string;
@@ -154,7 +155,7 @@ export class PartsOrderingService {
         throw new Error(`Failed to fetch vendor catalog: ${error.message}`);
       }
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: Views<'vw_vendor_catalog_items'>) => ({
         catalogItemId: row.catalog_item_id,
         vendorId: row.vendor_id,
         vendorName: row.vendor_name,
@@ -165,12 +166,12 @@ export class PartsOrderingService {
         partCategory: row.part_category,
         vendorPartNumber: row.vendor_part_number,
         vendorPartDescription: row.vendor_part_description,
-        standardCost: parseFloat(row.standard_cost || 0),
-        lastCost: parseFloat(row.last_cost || 0),
+        standardCost: parseFloat(String(row.standard_cost || 0)),
+        lastCost: parseFloat(String(row.last_cost || 0)),
         lastPurchaseDate: row.last_purchase_date,
-        leadTimeDays: parseInt(row.lead_time_days || 0),
-        moq: parseInt(row.moq || 0),
-        packQty: parseInt(row.pack_qty || 1),
+        leadTimeDays: parseInt(String(row.lead_time_days || 0)),
+        moq: parseInt(String(row.moq || 0)),
+        packQty: parseInt(String(row.pack_qty || 1)),
         uom: row.uom,
         isPreferredVendor: row.is_preferred_vendor || false,
         isDiscontinued: row.is_discontinued || false,
@@ -222,7 +223,7 @@ export class PartsOrderingService {
         throw new Error(`Failed to fetch reorder alerts: ${error.message}`);
       }
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: Views<'vw_reorder_alerts'>) => ({
         partId: row.part_id,
         partNumber: row.part_number,
         description: row.description,
@@ -230,17 +231,17 @@ export class PartsOrderingService {
         locationId: row.location_id,
         locationName: row.location_name,
         locationType: row.location_type,
-        onHand: parseInt(row.on_hand || 0),
-        reserved: parseInt(row.reserved || 0),
-        inboundOpenPo: parseFloat(row.inbound_open_po || 0),
-        available: parseInt(row.available || 0),
-        minQty: parseInt(row.min_qty || 0),
-        maxQty: parseInt(row.max_qty || 0),
-        safetyStock: parseInt(row.safety_stock || 0),
-        leadDays: parseInt(row.lead_days || 7),
-        avgDailyUsage: parseFloat(row.avg_daily_usage || 0),
-        reorderPoint: parseInt(row.reorder_point || 0),
-        suggestedOrderQty: parseFloat(row.suggested_order_qty || 0),
+        onHand: parseInt(String(row.on_hand || 0)),
+        reserved: parseInt(String(row.reserved || 0)),
+        inboundOpenPo: parseFloat(String(row.inbound_open_po || 0)),
+        available: parseInt(String(row.available || 0)),
+        minQty: parseInt(String(row.min_qty || 0)),
+        maxQty: parseInt(String(row.max_qty || 0)),
+        safetyStock: parseInt(String(row.safety_stock || 0)),
+        leadDays: parseInt(String(row.lead_days || 7)),
+        avgDailyUsage: parseFloat(String(row.avg_daily_usage || 0)),
+        reorderPoint: parseInt(String(row.reorder_point || 0)),
+        suggestedOrderQty: parseFloat(String(row.suggested_order_qty || 0)),
         belowReorderPoint: row.below_reorder_point || false,
         isStockout: row.is_stockout || false,
         reorderMethod: row.reorder_method,
@@ -248,10 +249,10 @@ export class PartsOrderingService {
         vendorId: row.vendor_id,
         vendorName: row.vendor_name,
         vendorPartNumber: row.vendor_part_number,
-        unitCost: parseFloat(row.unit_cost || 0),
-        moq: parseInt(row.moq || 1),
-        packQty: parseInt(row.pack_qty || 1),
-        inventoryValue: parseFloat(row.inventory_value || 0),
+        unitCost: parseFloat(String(row.unit_cost || 0)),
+        moq: parseInt(String(row.moq || 1)),
+        packQty: parseInt(String(row.pack_qty || 1)),
+        inventoryValue: parseFloat(String(row.inventory_value || 0)),
       }));
     } catch (error) {
       console.error('Error in getReorderAlerts:', error);
@@ -279,21 +280,21 @@ export class PartsOrderingService {
         throw new Error(`Failed to fetch lead time metrics: ${error.message}`);
       }
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: Views<'vw_vendor_lead_time_metrics'>) => ({
         vendorId: row.vendor_id,
         vendorName: row.vendor_name,
         vendorCode: row.vendor_code,
-        totalPoLines: parseInt(row.total_po_lines || 0),
-        receivedPoLines: parseInt(row.received_po_lines || 0),
-        avgLeadDays: parseFloat(row.avg_lead_days || 0),
-        medianLeadDays: parseFloat(row.median_lead_days || 0),
-        p90LeadDays: parseFloat(row.p90_lead_days || 0),
-        stddevLeadDays: parseFloat(row.stddev_lead_days || 0),
-        minLeadDays: parseFloat(row.min_lead_days || 0),
-        maxLeadDays: parseFloat(row.max_lead_days || 0),
-        avgDaysVariance: parseFloat(row.avg_days_variance || 0),
-        onTimePct: parseFloat(row.on_time_pct || 0),
-        fillRatePct: parseFloat(row.fill_rate_pct || 0),
+        totalPoLines: parseInt(String(row.total_po_lines || 0)),
+        receivedPoLines: parseInt(String(row.received_po_lines || 0)),
+        avgLeadDays: parseFloat(String(row.avg_lead_days || 0)),
+        medianLeadDays: parseFloat(String(row.median_lead_days || 0)),
+        p90LeadDays: parseFloat(String(row.p90_lead_days || 0)),
+        stddevLeadDays: parseFloat(String(row.stddev_lead_days || 0)),
+        minLeadDays: parseFloat(String(row.min_lead_days || 0)),
+        maxLeadDays: parseFloat(String(row.max_lead_days || 0)),
+        avgDaysVariance: parseFloat(String(row.avg_days_variance || 0)),
+        onTimePct: parseFloat(String(row.on_time_pct || 0)),
+        fillRatePct: parseFloat(String(row.fill_rate_pct || 0)),
         earliestOrderDate: row.earliest_order_date,
         latestReceiptDate: row.latest_receipt_date,
       }));
@@ -352,8 +353,8 @@ export class PartsOrderingService {
 
   static async upsertReorderPolicy(policy: Partial<ReorderPolicy>): Promise<ReorderPolicy> {
     try {
-      const payload: any = {
-        part_id: policy.partId,
+      const payload: TablesInsert<'inventory_reorder_policies'> = {
+        part_id: policy.partId!,
         location_id: policy.locationId,
         min_qty: policy.minQty || 0,
         max_qty: policy.maxQty || 0,

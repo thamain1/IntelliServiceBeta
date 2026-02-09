@@ -13,7 +13,10 @@ import {
   type CustomerEquipmentByLocation
 } from '../../services/CustomerFinancialService';
 
-type Customer = Database['public']['Tables']['customers']['Row'];
+type Customer = Database['public']['Tables']['customers']['Row'] & {
+  site_contact_name?: string;
+  site_contact_phone?: string;
+};
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   profiles?: { full_name: string };
 };
@@ -49,13 +52,14 @@ export function CustomerDetailModal({ customer, onClose, onEdit, onDelete }: Cus
     } else if (activeTab === 'financials') {
       loadFinancials();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, customer.id]);
 
   const loadServiceHistory = async () => {
     setLoading(true);
     try {
       const { data, error } = await (supabase
-        .from('tickets') as any)
+        .from('tickets') as unknown as { select: (query: string) => { eq: (col: string, val: string) => { order: (col: string, opts: { ascending: boolean }) => Promise<{ data: Ticket[] | null; error: Error | null }> } } })
         .select('*, profiles:assigned_to(full_name)')
         .eq('customer_id', customer.id)
         .order('created_at', { ascending: false });
@@ -247,20 +251,20 @@ export function CustomerDetailModal({ customer, onClose, onEdit, onDelete }: Cus
                 </div>
               )}
 
-              {((customer as any).site_contact_name || (customer as any).site_contact_phone) && (
+              {(customer.site_contact_name || customer.site_contact_phone) && (
                 <div className="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <Phone className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Site Contact</p>
-                    {(customer as any).site_contact_name && (
-                      <p className="text-gray-900 dark:text-white font-medium">{(customer as any).site_contact_name}</p>
+                    {customer.site_contact_name && (
+                      <p className="text-gray-900 dark:text-white font-medium">{customer.site_contact_name}</p>
                     )}
-                    {(customer as any).site_contact_phone && (
+                    {customer.site_contact_phone && (
                       <a
-                        href={`tel:${(customer as any).site_contact_phone}`}
+                        href={`tel:${customer.site_contact_phone}`}
                         className="text-blue-600 hover:underline"
                       >
-                        {(customer as any).site_contact_phone}
+                        {customer.site_contact_phone}
                       </a>
                     )}
                   </div>

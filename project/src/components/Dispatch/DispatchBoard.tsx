@@ -46,6 +46,7 @@ export function DispatchBoard({ selectedDate, onDateChange }: DispatchBoardProps
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const loadData = async () => {
@@ -141,14 +142,15 @@ export function DispatchBoard({ selectedDate, onDateChange }: DispatchBoardProps
       }
 
       await loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating ticket:', error);
       let errorMessage = 'Failed to assign ticket. Please try again.';
-      if (error?.message) {
-        if (error.message.includes('permission denied') || error.message.includes('policy') || error.code === 'PGRST116') {
+      const err = error as { message?: string; code?: string };
+      if (err?.message) {
+        if (err.message.includes('permission denied') || err.message.includes('policy') || err.code === 'PGRST116') {
           errorMessage = 'You do not have permission to update this ticket. Please contact your administrator.';
         } else {
-          errorMessage = `Failed to assign ticket: ${error.message}`;
+          errorMessage = `Failed to assign ticket: ${err.message}`;
         }
       }
       alert(errorMessage);

@@ -25,6 +25,9 @@ interface MarginMetrics {
   projects: ProjectMargin[];
 }
 
+type TooltipFormatterValue = [string] | [string, string];
+type TooltipFormatter = (value: number, name?: string) => TooltipFormatterValue;
+
 export function ProjectMarginsReport() {
   const { dateRange, setDateRange, start, end } = useBIDateRange();
   const [metrics, setMetrics] = useState<MarginMetrics>({
@@ -39,6 +42,7 @@ export function ProjectMarginsReport() {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadMetrics = async () => {
@@ -239,7 +243,7 @@ export function ProjectMarginsReport() {
                     }}
                     itemStyle={{ color: '#F9FAFB' }}
                     labelStyle={{ color: '#F9FAFB' }}
-                    formatter={((value: number) => [`$${value.toLocaleString()}`]) as any}
+                    formatter={((value: number) => [`$${value.toLocaleString()}`]) as unknown as TooltipFormatter}
                   />
                   <Legend />
                   <Bar dataKey="revenue" name="Revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} />
@@ -292,7 +296,7 @@ export function ProjectMarginsReport() {
                     }}
                     itemStyle={{ color: '#F9FAFB' }}
                     labelStyle={{ color: '#F9FAFB' }}
-                    formatter={((value: number) => [`${value}%`, 'Margin']) as any}
+                    formatter={((value: number) => [`${value}%`, 'Margin']) as unknown as TooltipFormatter}
                   />
                   <Bar dataKey="margin" name="Margin %" radius={[4, 4, 0, 0]}>
                     {metrics.projects.slice(0, 8).map((project, index) => (

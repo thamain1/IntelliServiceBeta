@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Calendar, Download, RefreshCw, AlertCircle, Filter, Building2, Wrench } from 'lucide-react';
 import { JobPLService, JobPLSummary, JobType, JobStatus } from '../../services/JobPLService';
 import { supabase } from '../../lib/supabase';
@@ -38,12 +38,6 @@ export function JobPLReportView({ onExportPDF }: JobPLReportViewProps) {
     loadCustomers();
   }, []);
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      loadReport();
-    }
-  }, [startDate, endDate, jobType, jobStatus, customerId, minRevenue]);
-
   const loadCustomers = async () => {
     const { data } = await supabase
       .from('customers')
@@ -53,7 +47,7 @@ export function JobPLReportView({ onExportPDF }: JobPLReportViewProps) {
     setCustomers(data || []);
   };
 
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -68,13 +62,19 @@ export function JobPLReportView({ onExportPDF }: JobPLReportViewProps) {
       });
 
       setReport(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading job P&L:', err);
-      setError(err.message || 'Failed to load report');
+      setError(err instanceof Error ? err.message : 'Failed to load report');
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate, jobType, jobStatus, customerId, minRevenue]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      loadReport();
+    }
+  }, [startDate, endDate, jobType, jobStatus, customerId, minRevenue, loadReport]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

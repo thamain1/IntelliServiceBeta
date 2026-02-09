@@ -86,13 +86,13 @@ export function PartsRequestQueue({ onCreatePO }: PartsRequestQueueProps) {
       if (requestsResult.error) {
         console.error('Error loading requests:', requestsResult.error);
       } else {
-        setRequests((requestsResult.data as any) || []);
+        setRequests((requestsResult.data as unknown as PartsRequest[]) || []);
       }
 
       if (metricsResult.error && metricsResult.error.code !== 'PGRST116') {
         console.error('Error loading metrics:', metricsResult.error);
       } else {
-        setMetrics((metricsResult.data as any));
+        setMetrics((metricsResult.data as unknown as ProcurementMetrics));
       }
     } catch (error) {
       console.error('Error loading data:', error);

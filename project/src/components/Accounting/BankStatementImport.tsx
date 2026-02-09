@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Upload, FileText, AlertCircle, X, Settings } from 'lucide-react';
 import {
   parseFile,
@@ -40,20 +40,20 @@ export function BankStatementImport({
     referenceNumber: '',
   });
 
-  const handleFileDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
       processFile(droppedFile);
     }
-  }, []);
+  };
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       processFile(selectedFile);
     }
-  }, []);
+  };
 
   const processFile = async (selectedFile: File) => {
     setFile(selectedFile);
@@ -169,9 +169,9 @@ export function BankStatementImport({
       }
 
       onImportComplete();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Import error:', error);
-      setParseErrors(['Failed to import: ' + error.message]);
+      setParseErrors(['Failed to import: ' + (error instanceof Error ? error.message : 'Unknown error')]);
       setStep('preview');
     } finally {
       _setImporting(false);

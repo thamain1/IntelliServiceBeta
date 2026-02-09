@@ -77,7 +77,7 @@ export function TrackingView() {
 
   const getLastUpdateTime = (location?: TechnicianLocation) => {
     if (!location || !location.timestamp) return 'No location data';
-    const lastUpdate = new Date(location.timestamp as any);
+    const lastUpdate = new Date(location.timestamp);
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - lastUpdate.getTime()) / 60000);
 
@@ -89,7 +89,7 @@ export function TrackingView() {
 
   const getStatusColor = (location?: TechnicianLocation) => {
     if (!location || !location.timestamp) return 'bg-gray-400';
-    const lastUpdate = new Date(location.timestamp as any);
+    const lastUpdate = new Date(location.timestamp);
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - lastUpdate.getTime()) / 60000);
 
@@ -157,7 +157,7 @@ export function TrackingView() {
                   technicians.filter((t) => {
                     if (!t.latest_location) return false;
                     const diffMinutes = Math.floor(
-                      (new Date().getTime() - new Date(t.latest_location.timestamp as any).getTime()) /
+                      (new Date().getTime() - new Date(t.latest_location.timestamp).getTime()) /
                         60000
                     );
                     return diffMinutes < 5;

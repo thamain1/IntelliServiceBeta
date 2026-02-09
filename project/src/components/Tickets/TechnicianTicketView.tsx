@@ -37,6 +37,8 @@ type Ticket = {
   revisit_required?: boolean | null;
   assigned_to?: string | null;
   completed_date?: string | null;
+  site_contact_name?: string | null;
+  site_contact_phone?: string | null;
   customers: {
     name: string;
     phone: string | null;
@@ -167,6 +169,7 @@ export function TechnicianTicketView() {
     checkActiveTimer();
     checkShiftClockIn();
     loadStandardCodes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
   useEffect(() => {
@@ -180,6 +183,7 @@ export function TechnicianTicketView() {
       console.log('No ticket selected');
       setOnSiteProgress(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket]);
 
   useEffect(() => {
@@ -265,15 +269,15 @@ export function TechnicianTicketView() {
   const loadCompletedTickets = async () => {
     if (!profile?.id) return;
     try {
-      const { data, error } = await (supabase
-        .from('tickets') as any)
+      const { data, error } = await supabase
+        .from('tickets')
         .select('*, customers!tickets_customer_id_fkey(name, phone, email, address), equipment(equipment_type, model_number)')
         .eq('assigned_to', profile.id)
         .in('status', ['completed', 'closed_billed'])
         .order('completed_date', { ascending: false })
         .limit(20);
       if (error) throw error;
-      setCompletedTickets(data || []);
+      setCompletedTickets((data as unknown as Ticket[]) || []);
     } catch (error) {
       console.error('Error loading completed tickets:', error);
     }
@@ -281,8 +285,8 @@ export function TechnicianTicketView() {
 
   const loadMyTickets = async () => {
     try {
-      const { data, error } = await (supabase
-        .from('tickets') as any)
+      const { data, error } = await supabase
+        .from('tickets')
         .select('*, customers!tickets_customer_id_fkey(name, phone, email, address), equipment(equipment_type, model_number)')
         .eq('assigned_to', profile?.id ?? '')
         .in('status', ['open', 'scheduled', 'in_progress'])
@@ -290,7 +294,7 @@ export function TechnicianTicketView() {
 
       if (error) throw error;
       console.log('Loaded tickets:', data?.length || 0);
-      setTickets(data || []);
+      setTickets((data as unknown as Ticket[]) || []);
     } catch (error) {
       console.error('Error loading tickets:', error);
       alert('Error loading tickets: ' + (error as Error).message);
@@ -593,7 +597,14 @@ export function TechnicianTicketView() {
         }
       }
 
-      const updateData: any = {
+      const updateData: {
+        ticket_id: string;
+        technician_id: string;
+        update_type: string;
+        notes: string;
+        progress_percent: number;
+        status?: string;
+      } = {
         ticket_id: selectedTicket.id,
         technician_id: user.id,
         update_type: updateFormData.update_type,
@@ -614,7 +625,14 @@ export function TechnicianTicketView() {
       }
 
       if (updateFormData.status) {
-        const ticketUpdateData: any = {
+        const ticketUpdateData: {
+          status: string;
+          updated_at: string;
+          assigned_to: string | null | undefined;
+          completed_date?: string;
+          problem_code?: string;
+          resolution_code?: string;
+        } = {
           status: updateFormData.status,
           updated_at: new Date().toISOString(),
           assigned_to: selectedTicket.assigned_to
@@ -675,7 +693,7 @@ export function TechnicianTicketView() {
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = (error as any).message;
+        errorMessage = (error as { message: string }).message;
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
@@ -758,13 +776,13 @@ export function TechnicianTicketView() {
 
       console.log('Inserting record with photo_type:', photoType);
 
-      const { error } = await supabase.from('ticket_photos' as any).insert([{
+      const { error } = await supabase.from('ticket_photos').insert([{
         ticket_id: selectedTicket.id,
         uploaded_by: profile?.id,
         photo_url: urlData.publicUrl,
         photo_type: photoType,
         caption: photoFormData.caption || null,
-      }] as any);
+      }]);
 
       if (error) {
         console.error('Database insert error:', error);
@@ -782,9 +800,9 @@ export function TechnicianTicketView() {
       });
       setSelectedFile(null);
       alert('Photo uploaded successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading photo:', error);
-      const errorMessage = error?.message || 'Unknown error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       alert(`Failed to upload photo: ${errorMessage}`);
     } finally {
       setUploadingPhoto(false);
@@ -1143,20 +1161,20 @@ export function TechnicianTicketView() {
                     </p>
                   </div>
                 </div>
-                {((selectedTicket as any).site_contact_name || (selectedTicket as any).site_contact_phone) && (
+                {(selectedTicket.site_contact_name || selectedTicket.site_contact_phone) && (
                   <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                     <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">Site Contact</p>
-                    {(selectedTicket as any).site_contact_name && (
+                    {selectedTicket.site_contact_name && (
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {(selectedTicket as any).site_contact_name}
+                        {selectedTicket.site_contact_name}
                       </p>
                     )}
-                    {(selectedTicket as any).site_contact_phone && (
+                    {selectedTicket.site_contact_phone && (
                       <a
-                        href={`tel:${(selectedTicket as any).site_contact_phone}`}
+                        href={`tel:${selectedTicket.site_contact_phone}`}
                         className="text-blue-600 hover:underline font-medium"
                       >
-                        {(selectedTicket as any).site_contact_phone}
+                        {selectedTicket.site_contact_phone}
                       </a>
                     )}
                   </div>
@@ -1325,7 +1343,7 @@ export function TechnicianTicketView() {
                   <select
                     required
                     value={updateFormData.update_type}
-                    onChange={(e) => setUpdateFormData({ ...updateFormData, update_type: e.target.value as any })}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, update_type: e.target.value as 'progress_note' | 'completed' | 'status_change' })}
                     className="input"
                   >
                     <option value="progress_note">Progress Note</option>
@@ -1580,7 +1598,7 @@ export function TechnicianTicketView() {
                   <select
                     required
                     value={photoFormData.photo_type}
-                    onChange={(e) => setPhotoFormData({ ...photoFormData, photo_type: e.target.value as any })}
+                    onChange={(e) => setPhotoFormData({ ...photoFormData, photo_type: e.target.value as 'before' | 'during' | 'after' | 'issue' | 'equipment' | 'other' })}
                     className="input"
                   >
                     <option value="before">Before</option>
@@ -1714,7 +1732,7 @@ export function TechnicianTicketView() {
                   <select
                     required
                     value={needPartsFormData.urgency}
-                    onChange={(e) => setNeedPartsFormData({ ...needPartsFormData, urgency: e.target.value as any })}
+                    onChange={(e) => setNeedPartsFormData({ ...needPartsFormData, urgency: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
                     className="input"
                   >
                     <option value="low">Low - Can wait a few days</option>
@@ -1875,7 +1893,7 @@ export function TechnicianTicketView() {
                   return;
                 }
 
-                let ticket = tickets.find(t => t.id === activeTimer.ticket_id);
+                const ticket = tickets.find(t => t.id === activeTimer.ticket_id);
                 if (ticket) {
                   setSelectedTicket(ticket);
                   setViewMode('edit');
@@ -1883,8 +1901,8 @@ export function TechnicianTicketView() {
                   // Ticket not in local list, fetch it directly
                   console.log('Fetching ticket directly, id:', activeTimer.ticket_id);
                   try {
-                    const { data, error } = await (supabase
-                      .from('tickets') as any)
+                    const { data, error } = await supabase
+                      .from('tickets')
                       .select('*, customers!tickets_customer_id_fkey(name, phone, email, address), equipment(equipment_type, model_number)')
                       .eq('id', activeTimer.ticket_id)
                       .single();
@@ -1897,14 +1915,14 @@ export function TechnicianTicketView() {
                       return;
                     }
                     if (data) {
-                      setSelectedTicket(data as Ticket);
+                      setSelectedTicket(data as unknown as Ticket);
                       setViewMode('edit');
                     } else {
                       alert('Ticket not found in database.');
                     }
-                  } catch (error: any) {
+                  } catch (error: unknown) {
                     console.error('Error fetching ticket:', error);
-                    alert(`Could not load ticket: ${error?.message || 'Unknown error'}`);
+                    alert(`Could not load ticket: ${error instanceof Error ? error.message : 'Unknown error'}`);
                   }
                 }
               }}

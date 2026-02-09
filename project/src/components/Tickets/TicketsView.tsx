@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Plus,
   Search,
@@ -10,6 +10,7 @@ import {
   CheckCircle,
   XCircle,
   Download,
+  type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -71,30 +72,16 @@ export function TicketsView({ initialFilter }: TicketsViewProps = {}) {
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
-  if (profile?.role === 'technician') {
-    return <TechnicianTicketView />;
-  }
-
-  useEffect(() => {
-    loadTickets();
-  }, [profile]);
-
-  useEffect(() => {
-    if (initialFilter && initialFilter !== 'all') {
-      setStatusFilter(initialFilter);
-    }
-  }, [initialFilter]);
-
-  const loadTickets = async () => {
+  const loadTickets = useCallback(async () => {
     try {
-      let query = (supabase
-        .from('tickets') as any)
+      const baseQuery = supabase
+        .from('tickets')
         .select('*, customers!tickets_customer_id_fkey(name), profiles!tickets_assigned_to_fkey(full_name), equipment(model_number, manufacturer), ticket_assignments(technician_id, role, profiles!ticket_assignments_technician_id_fkey(full_name)), hold_active, hold_type, hold_parts_active, hold_issue_active, revisit_required')
         .order('created_at', { ascending: false });
 
-      if (profile?.role === 'technician') {
-        query = query.eq('assigned_to', profile.id);
-      }
+      const query = profile?.role === 'technician'
+        ? baseQuery.eq('assigned_to', profile.id)
+        : baseQuery;
 
       const { data, error } = await query;
 
@@ -105,13 +92,27 @@ export function TicketsView({ initialFilter }: TicketsViewProps = {}) {
       }
 
       console.log('Loaded tickets:', data);
-      setTickets((data as Ticket[]) || []);
+      setTickets((data as unknown as Ticket[]) || []);
     } catch (error) {
       console.error('Error loading tickets:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
+
+  useEffect(() => {
+    if (initialFilter && initialFilter !== 'all') {
+      setStatusFilter(initialFilter);
+    }
+  }, [initialFilter]);
+
+  if (profile?.role === 'technician') {
+    return <TechnicianTicketView />;
+  }
 
   const handleDeleteTicket = async (ticketId: string, ticketNumber: string) => {
     if (!confirm(`Are you sure you want to delete ticket ${ticketNumber}? This action cannot be undone.`)) {
@@ -202,8 +203,8 @@ export function TicketsView({ initialFilter }: TicketsViewProps = {}) {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const getStatusIcon = (status: string | null) => {
-    const icons: Record<string, any> = {
+  const getStatusIcon = (status: string | null): LucideIcon => {
+    const icons: Record<string, LucideIcon> = {
       open: AlertCircle,
       scheduled: Clock,
       in_progress: Clock,

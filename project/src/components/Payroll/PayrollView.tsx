@@ -40,12 +40,21 @@ type Deduction = {
   is_active: boolean;
 };
 
+type Employee = {
+  id: string;
+  full_name: string;
+  role: string;
+  hourly_rate?: number;
+};
+
+type EmployeeHoursAccumulator = Record<string, { regular_hours: number; overtime_hours: number }>;
+
 export function PayrollView() {
   const [activeTab, setActiveTab] = useState<'periods' | 'employees' | 'deductions' | 'reports'>('periods');
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [payrollDetails, setPayrollDetails] = useState<PayrollDetail[]>([]);
   const [deductions, setDeductions] = useState<Deduction[]>([]);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [showDeductionModal, setShowDeductionModal] = useState(false);
@@ -79,7 +88,7 @@ export function PayrollView() {
         .order('period_start_date', { ascending: false });
 
       if (error) throw error;
-      setPayrollRuns((data as any) || []);
+      setPayrollRuns((data as PayrollRun[]) || []);
     } catch (error) {
       console.error('Error loading payroll runs:', error);
     } finally {
@@ -96,7 +105,7 @@ export function PayrollView() {
         .order('profiles(full_name)', { ascending: true });
 
       if (error) throw error;
-      setPayrollDetails((data as any) || []);
+      setPayrollDetails((data as unknown as PayrollDetail[]) || []);
     } catch (error) {
       console.error('Error loading payroll details:', error);
     }
@@ -110,7 +119,7 @@ export function PayrollView() {
         .order('deduction_name', { ascending: true });
 
       if (error) throw error;
-      setDeductions((data as any) || []);
+      setDeductions((data as Deduction[]) || []);
     } catch (error) {
       console.error('Error loading deductions:', error);
     }
@@ -184,7 +193,7 @@ export function PayrollView() {
 
       if (timeError) throw timeError;
 
-      const employeeHours = timeLogs?.reduce((acc: any, log) => {
+      const employeeHours = timeLogs?.reduce((acc: EmployeeHoursAccumulator, log) => {
         if (!acc[log.user_id]) {
           acc[log.user_id] = {
             regular_hours: 0,
@@ -399,7 +408,7 @@ export function PayrollView() {
           {['periods', 'employees', 'deductions', 'reports'].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab as 'periods' | 'employees' | 'deductions' | 'reports')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? 'border-blue-600 text-blue-600'
@@ -947,7 +956,7 @@ export function PayrollView() {
                   <select
                     required
                     value={deductionFormData.deduction_type}
-                    onChange={(e) => setDeductionFormData({ ...deductionFormData, deduction_type: e.target.value as any })}
+                    onChange={(e) => setDeductionFormData({ ...deductionFormData, deduction_type: e.target.value as 'tax' | 'insurance' | 'retirement' | 'garnishment' | 'other' })}
                     className="input"
                   >
                     <option value="tax">Tax</option>
@@ -965,7 +974,7 @@ export function PayrollView() {
                   <select
                     required
                     value={deductionFormData.calculation_method}
-                    onChange={(e) => setDeductionFormData({ ...deductionFormData, calculation_method: e.target.value as any })}
+                    onChange={(e) => setDeductionFormData({ ...deductionFormData, calculation_method: e.target.value as 'percentage' | 'fixed_amount' })}
                     className="input"
                   >
                     <option value="percentage">Percentage</option>

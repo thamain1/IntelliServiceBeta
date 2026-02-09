@@ -71,6 +71,7 @@ export function RecordPaymentModal({
       loadBankAccounts();
       resetForm();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export function RecordPaymentModal({
       setUnpaidBills([]);
       setAllocations([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
   useEffect(() => {
@@ -97,6 +99,7 @@ export function RecordPaymentModal({
         setPaymentAmount(bill.balance_due.toString());
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedBillId, unpaidBills]);
 
   const loadVendors = async () => {
@@ -256,9 +259,9 @@ export function RecordPaymentModal({
 
       onPaymentRecorded();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to record payment:', err);
-      setError(err.message || 'Failed to record payment');
+      setError((err as Error).message || 'Failed to record payment');
     } finally {
       setLoading(false);
     }

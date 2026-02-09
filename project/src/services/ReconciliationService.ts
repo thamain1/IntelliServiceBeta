@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Tables, Enums } from '../lib/dbTypes';
+import type { Tables, TablesUpdate, Enums, GLEntryRow } from '../lib/dbTypes';
 
 export type ReconciliationStatus = Enums<'reconciliation_status'>;
 export type BankLineMatchStatus = Enums<'bank_line_match_status'>;
@@ -198,9 +198,9 @@ export class ReconciliationService {
 
     // Combine and format
     const allEntries = [
-      ...(clearedEntries || []).map((entry: any) => ({
+      ...(clearedEntries || []).map((entry: GLEntryRow) => ({
         ...entry,
-        net_amount: entry.debit_amount > 0 ? entry.debit_amount : -entry.credit_amount,
+        net_amount: (entry.debit_amount ?? 0) > 0 ? (entry.debit_amount ?? 0) : -(entry.credit_amount ?? 0),
       })),
       ...unreconciledEntries,
     ];
@@ -218,7 +218,7 @@ export class ReconciliationService {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
 
-    const updates: any = {
+    const updates: TablesUpdate<'gl_entries'> = {
       reconciliation_id: reconciliationId,
     };
 
@@ -248,7 +248,7 @@ export class ReconciliationService {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
 
-    const updates: any = {
+    const updates: TablesUpdate<'gl_entries'> = {
       reconciliation_id: reconciliationId,
     };
 
@@ -416,11 +416,11 @@ export class ReconciliationService {
     const reconciliation = await this.getReconciliation(params.reconciliation_id);
 
     // Generate entry number
-    const { data: entryCount } = await supabase
+    const { count: entryCount } = await supabase
       .from('gl_entries')
       .select('id', { count: 'exact', head: true });
 
-    const entryNumber = `JE-${String((entryCount as any)?.count || 0).padStart(6, '0')}`;
+    const entryNumber = `JE-${String(entryCount ?? 0).padStart(6, '0')}`;
 
     // Calculate fiscal period and year from entry date
     const entryDate = new Date(params.entry_date);
@@ -468,7 +468,7 @@ export class ReconciliationService {
 
     // Find the cash/bank account entry and mark it as cleared
     const cashEntry = createdEntries?.find(
-      (e: any) => e.account_id === reconciliation.account_id
+      (e: GLEntryRow) => e.account_id === reconciliation.account_id
     );
 
     if (cashEntry) {

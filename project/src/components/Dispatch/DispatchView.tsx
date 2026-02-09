@@ -25,6 +25,7 @@ export function DispatchView() {
   useEffect(() => {
     loadTickets();
     loadHeldTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate, holdFilter]);
 
   const loadTickets = async () => {

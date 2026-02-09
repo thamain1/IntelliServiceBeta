@@ -95,9 +95,9 @@ export function LeadsInbox({ onRefresh }: LeadsInboxProps) {
       });
       await loadLeads();
       onRefresh?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create lead:', err);
-      setCreateError(err?.message || 'Failed to create lead. Please try again.');
+      setCreateError(err instanceof Error ? err.message : 'Failed to create lead. Please try again.');
     } finally {
       setCreating(false);
     }

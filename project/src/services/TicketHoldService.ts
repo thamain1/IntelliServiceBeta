@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import type { Json } from '../lib/database.types';
 
 export interface HoldForPartsPayload {
   ticketId: string;
@@ -19,7 +20,7 @@ export interface ReportIssuePayload {
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
   summary?: string;
-  metadata?: Record<string, any>;
+  metadata?: { [key: string]: Json | undefined };
 }
 
 export interface HoldResponse {

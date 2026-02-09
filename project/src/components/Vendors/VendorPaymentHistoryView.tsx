@@ -39,6 +39,7 @@ export function VendorPaymentHistoryView({ vendorId }: VendorPaymentHistoryViewP
       loadVendors();
       loadPaymentHistory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId, selectedVendor, selectedStatus, dateFrom, dateTo]);
 
   const loadVendors = async () => {

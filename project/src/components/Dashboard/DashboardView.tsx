@@ -31,6 +31,21 @@ interface DashboardViewProps {
   onNavigate?: (view: string, filter?: string) => void;
 }
 
+interface RecentTicket {
+  id: string;
+  ticket_number?: string;
+  title?: string;
+  status?: string;
+  priority?: string;
+  created_at?: string;
+  customers?: { name: string } | null;
+  assigned_to_profile?: { full_name: string } | null;
+}
+
+interface ReorderAlertRow {
+  part_id: string;
+}
+
 export function DashboardView({ onNavigate }: DashboardViewProps = {}) {
   const { profile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
@@ -44,7 +59,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps = {}) {
     awaitingParts: 0,
     issuesReported: 0,
   });
-  const [recentTickets, setRecentTickets] = useState<any[]>([]);
+  const [recentTickets, setRecentTickets] = useState<RecentTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,7 +114,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps = {}) {
       const openCount = ticketsRes.data?.filter((t) => t.status === 'open').length || 0;
 
       // Count unique parts below reorder point (view may have multiple locations per part)
-      const uniquePartsLowStock = new Set(reorderAlertsRes.data?.map((r: any) => r.part_id) || []);
+      const uniquePartsLowStock = new Set(reorderAlertsRes.data?.map((r: ReorderAlertRow) => r.part_id) || []);
       const lowStockCount = uniquePartsLowStock.size;
 
       const holdMetrics = holdMetricsRes.data;

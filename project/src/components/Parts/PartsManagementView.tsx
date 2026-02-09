@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Package, Truck, ShoppingCart, Hash, Shield, MapPin, ArrowRightLeft, PackageCheck, Wrench, ClipboardList, PackagePlus } from 'lucide-react';
 import { PartsView } from './PartsView';
 import { VendorsView } from './VendorsView';
@@ -14,6 +14,13 @@ import { PartsPickupView } from './PartsPickupView';
 type TabType = 'catalog' | 'vendors' | 'orders' | 'serialized' | 'locations' | 'warranty' | 'transfers' | 'receiving' | 'requests' | 'pickup';
 type ItemType = 'part' | 'tool';
 
+interface LinkedRequest {
+  id: string;
+  part_id: string;
+  quantity: number;
+  urgency: string;
+}
+
 interface PartsManagementViewProps {
   initialView?: string;
   itemType?: ItemType;
@@ -23,7 +30,8 @@ export function PartsManagementView({ initialView, itemType = 'part' }: PartsMan
   const isTool = itemType === 'tool';
   const itemLabelPlural = isTool ? 'Tools' : 'Parts';
   const ItemIcon = isTool ? Wrench : Package;
-  const getInitialTab = (): TabType => {
+
+  const getInitialTab = useCallback((): TabType => {
     switch (initialView) {
       case 'parts-inventory':
       case 'tools-inventory':
@@ -46,17 +54,17 @@ export function PartsManagementView({ initialView, itemType = 'part' }: PartsMan
       default:
         return 'catalog';
     }
-  };
+  }, [initialView]);
 
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
-  const [linkedRequest, setLinkedRequest] = useState<any>(null);
+  const [linkedRequest, setLinkedRequest] = useState<LinkedRequest | null>(null);
 
   useEffect(() => {
     setActiveTab(getInitialTab());
-  }, [initialView]);
+  }, [getInitialTab]);
 
   // Handle creating a PO from a parts request
-  const handleCreatePOFromRequest = (request: any) => {
+  const handleCreatePOFromRequest = (request: LinkedRequest) => {
     setLinkedRequest(request);
     setActiveTab('orders');
   };

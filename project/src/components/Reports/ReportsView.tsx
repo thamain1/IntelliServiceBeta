@@ -27,6 +27,24 @@ interface ReportMetrics {
   mostUsedPartCount: number;
 }
 
+interface PartUsageRow {
+  part_id: string;
+  parts?: { name: string } | null;
+  quantity: number;
+}
+
+interface TechnicianTicketRow {
+  assigned_to: string;
+  profiles?: { full_name: string } | null;
+}
+
+interface TicketRow {
+  id: string;
+  status: string;
+  created_at: string;
+  completed_date?: string | null;
+}
+
 interface DailyData {
   date: string;
   tickets: number;
@@ -58,6 +76,7 @@ export function ReportsView() {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const getDateRange = () => {
@@ -100,7 +119,7 @@ export function ReportsView() {
         .gte('created_at', startDate.toISOString());
 
       const partCounts: Record<string, { name: string; count: number }> = {};
-      partsUsed?.forEach((usage: any) => {
+      partsUsed?.forEach((usage: PartUsageRow) => {
         const partId = usage.part_id;
         const partName = usage.parts?.name || 'Unknown';
         if (!partCounts[partId]) {
@@ -118,7 +137,7 @@ export function ReportsView() {
         .not('assigned_to', 'is', null);
 
       const techCounts: Record<string, { name: string; count: number }> = {};
-      technicianStats?.forEach((ticket: any) => {
+      technicianStats?.forEach((ticket: TechnicianTicketRow) => {
         const techId = ticket.assigned_to;
         const techName = ticket.profiles?.full_name || 'Unknown';
         if (!techCounts[techId]) {
@@ -142,7 +161,7 @@ export function ReportsView() {
 
       // Compute daily breakdown for chart
       const dailyMap = new Map<string, { tickets: number; completed: number }>();
-      ticketsData?.forEach((ticket: any) => {
+      ticketsData?.forEach((ticket: TicketRow) => {
         const date = new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const existing = dailyMap.get(date) || { tickets: 0, completed: 0 };
         existing.tickets += 1;
@@ -163,7 +182,7 @@ export function ReportsView() {
 
       // Compute status breakdown for pie chart
       const statusCounts: Record<string, number> = {};
-      ticketsData?.forEach((ticket: any) => {
+      ticketsData?.forEach((ticket: TicketRow) => {
         const status = ticket.status || 'unknown';
         statusCounts[status] = (statusCounts[status] || 0) + 1;
       });
@@ -215,6 +234,7 @@ export function ReportsView() {
         generated_at: new Date().toISOString(),
       },
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metrics, dateRange]);
 
   const handleExport = (format: 'pdf' | 'excel' | 'csv') => {
@@ -519,7 +539,7 @@ export function ReportsView() {
                   outerRadius={100}
                   paddingAngle={2}
                   dataKey="value"
-                  label={({ name, percent }: any) => `${name ?? ''} (${((percent ?? 0) * 100).toFixed(0)}%)`}
+                  label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} (${((percent ?? 0) * 100).toFixed(0)}%)`}
                   labelLine={false}
                 >
                   {statusData.map((entry, index) => (

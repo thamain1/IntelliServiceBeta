@@ -1,7 +1,16 @@
 import { supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
+import type { Tables, TablesUpdate, Views } from '../lib/dbTypes';
 
 type StockLocation = Database['public']['Tables']['stock_locations']['Row'];
+
+// Composite type for part_inventory with joined stock_locations
+type PartInventoryWithLocation = Tables<'part_inventory'> & {
+  stock_locations: Pick<Tables<'stock_locations'>, 'id' | 'name' | 'location_type'> | null;
+};
+
+// Type for get_equipment_child_parts RPC result
+type EquipmentChildPartRpc = Database['public']['Functions']['get_equipment_child_parts']['Returns'][number];
 
 export interface InventoryBalance {
   partId: string;
@@ -78,14 +87,17 @@ class InventoryService {
       throw error;
     }
 
-    const locations: InventoryBalance[] = (data || []).map((inv: any) => ({
-      partId: inv.part_id,
-      locationId: inv.stock_location_id,
-      locationName: inv.stock_locations?.name || 'Unknown',
-      locationType: inv.stock_locations?.location_type || 'unknown',
-      quantity: inv.quantity,
-      unitCost: inv.unit_cost,
-    }));
+    const locations: InventoryBalance[] = (data || []).map((inv: unknown) => {
+      const inventory = inv as unknown as PartInventoryWithLocation;
+      return {
+        partId: inventory.part_id,
+        locationId: inventory.stock_location_id,
+        locationName: inventory.stock_locations?.name || 'Unknown',
+        locationType: inventory.stock_locations?.location_type || 'unknown',
+        quantity: inventory.quantity,
+        unitCost: inventory.unit_cost,
+      };
+    });
 
     const totalQuantity = locations.reduce((sum, loc) => sum + loc.quantity, 0);
 
@@ -114,14 +126,17 @@ class InventoryService {
       throw error;
     }
 
-    return (data || []).map((inv: any) => ({
-      partId: inv.part_id,
-      locationId: inv.stock_location_id,
-      locationName: inv.stock_locations?.name || 'Unknown',
-      locationType: inv.stock_locations?.location_type || 'unknown',
-      quantity: inv.quantity,
-      unitCost: inv.unit_cost,
-    }));
+    return (data || []).map((inv: unknown) => {
+      const inventory = inv as unknown as PartInventoryWithLocation;
+      return {
+        partId: inventory.part_id,
+        locationId: inventory.stock_location_id,
+        locationName: inventory.stock_locations?.name || 'Unknown',
+        locationType: inventory.stock_locations?.location_type || 'unknown',
+        quantity: inventory.quantity,
+        unitCost: inventory.unit_cost,
+      };
+    });
   }
 
   async getOnHand(partId: string, locationId: string): Promise<number> {
@@ -176,14 +191,11 @@ class InventoryService {
           break;
       }
 
-      const updateData: any = {
+      const updateData: TablesUpdate<'part_inventory'> = {
         quantity: newQuantity,
         updated_at: new Date().toISOString(),
+        ...(unitCost !== undefined && { unit_cost: unitCost }),
       };
-
-      if (unitCost !== undefined) {
-        updateData.unit_cost = unitCost;
-      }
 
       const { error } = await supabase
         .from('part_inventory')
@@ -304,13 +316,13 @@ class InventoryService {
       throw error;
     }
 
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      serialNumber: item.serial_number,
-      partId: item.part_id,
-      partName: item.part_name,
-      partNumber: item.part_number,
-      status: item.status,
+    return (data || []).map((item: Views<'serialized_parts_available_stock'>) => ({
+      id: item.id ?? '',
+      serialNumber: item.serial_number ?? '',
+      partId: item.part_id ?? '',
+      partName: item.part_name ?? '',
+      partNumber: item.part_number ?? '',
+      status: item.status ?? '',
       currentLocationId: item.current_location_id,
       currentLocationName: item.location_name,
       installedAtSiteId: null,
@@ -340,13 +352,13 @@ class InventoryService {
       throw error;
     }
 
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      serialNumber: item.serial_number,
-      partId: item.part_id,
-      partName: item.part_name,
-      partNumber: item.part_number,
-      status: item.status,
+    return (data || []).map((item: Views<'serialized_parts_installed'>) => ({
+      id: item.id ?? '',
+      serialNumber: item.serial_number ?? '',
+      partId: item.part_id ?? '',
+      partName: item.part_name ?? '',
+      partNumber: item.part_number ?? '',
+      status: item.status ?? '',
       currentLocationId: null,
       currentLocationName: null,
       installedAtSiteId: item.installed_at_site_id,
@@ -366,7 +378,7 @@ class InventoryService {
       throw error;
     }
 
-    return (data || []).map((item: any) => ({
+    return (data || []).map((item: EquipmentChildPartRpc) => ({
       partId: item.part_id,
       serialNumber: item.serial_number,
       partName: item.part_name,

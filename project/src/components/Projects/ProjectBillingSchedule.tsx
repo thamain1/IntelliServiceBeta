@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, Clock, Plus, FileText, AlertTriangle } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Plus, FileText, AlertTriangle, type LucideIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { MilestoneInvoiceService } from '../../services/MilestoneInvoiceService';
@@ -45,6 +45,7 @@ export function ProjectBillingSchedule({ projectId, contractValue, customerId }:
   useEffect(() => {
     loadBillingSchedules();
     loadProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadProject = async () => {
@@ -71,7 +72,7 @@ export function ProjectBillingSchedule({ projectId, contractValue, customerId }:
         .order('sequence');
 
       if (error) throw error;
-      setSchedules((data as any) || []);
+      setSchedules((data as BillingSchedule[]) || []);
     } catch (error) {
       console.error('Error loading billing schedules:', error);
     } finally {
@@ -93,7 +94,7 @@ export function ProjectBillingSchedule({ projectId, contractValue, customerId }:
       const { error } = await supabase
         .from('project_billing_schedules')
         .update({
-          status: newStatus as any,
+          status: newStatus as 'planned' | 'ready_to_bill' | 'billed' | 'partially_billed' | 'cancelled',
           updated_by: profile?.id,
           updated_at: new Date().toISOString()
         })
@@ -125,7 +126,7 @@ export function ProjectBillingSchedule({ projectId, contractValue, customerId }:
   };
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, { className: string; icon: any }> = {
+    const badges: Record<string, { className: string; icon: LucideIcon }> = {
       planned: { className: 'badge badge-gray', icon: Clock },
       ready_to_bill: { className: 'badge badge-blue', icon: AlertTriangle },
       billed: { className: 'badge badge-green', icon: CheckCircle },
@@ -396,6 +397,7 @@ function BillMilestoneModal({
 
   useEffect(() => {
     validateMilestone();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [milestone.id]);
 
   const validateMilestone = async () => {
@@ -438,9 +440,9 @@ function BillMilestoneModal({
 
       alert(`Invoice ${invoice.invoice_number} created successfully!`);
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating invoice:', error);
-      alert(`Failed to create invoice: ${error.message || 'Unknown error'}`);
+      alert(`Failed to create invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

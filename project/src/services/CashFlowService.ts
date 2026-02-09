@@ -1,4 +1,19 @@
 import { supabase } from '../lib/supabase';
+import { Tables } from '../lib/dbTypes';
+
+/** GL entry with joined chart_of_accounts data for cash flow analysis */
+type GLEntryWithAccount = Tables<'gl_entries'> & {
+  chart_of_accounts: Pick<
+    Tables<'chart_of_accounts'>,
+    | 'account_code'
+    | 'account_name'
+    | 'account_type'
+    | 'account_subtype'
+    | 'is_cash_account'
+    | 'cash_flow_section'
+    | 'normal_balance'
+  >;
+};
 
 export interface CashFlowLineItem {
   description: string;
@@ -360,8 +375,8 @@ export class CashFlowService {
 
     const entriesByNumber = new Map<string, JournalEntry>();
 
-    for (const entry of allEntries || []) {
-      const account = (entry as any).chart_of_accounts;
+    for (const entry of (allEntries || []) as unknown as GLEntryWithAccount[]) {
+      const account = entry.chart_of_accounts;
       const isCash = cashAccountIds.includes(entry.account_id);
 
       const debit = Number(entry.debit_amount) || 0;

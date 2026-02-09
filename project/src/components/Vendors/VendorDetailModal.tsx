@@ -98,9 +98,10 @@ export function VendorDetailModal({ vendor, onClose, onUpdate }: VendorDetailMod
 
       setIsEditing(false);
       onUpdate();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating vendor:', error);
-      alert('Error updating vendor: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert('Error updating vendor: ' + errorMessage);
     } finally {
       setLoading(false);
     }

@@ -40,6 +40,7 @@ export function AHSPanel({ ticketId, onUpdate }: AHSPanelProps) {
 
   useEffect(() => {
     loadAHSData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
   const loadAHSData = async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Plus, Search, FileText, DollarSign, Clock, CheckCircle, AlertCircle, X, Send, Printer } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
@@ -101,9 +101,10 @@ export function InvoicingView() {
 
       console.log('Invoices with relations:', invoicesWithRelations);
       setInvoices(invoicesWithRelations);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading invoices:', error);
-      console.error('Error details:', error?.message, error?.details, error?.hint);
+      const err = error as { message?: string; details?: string; hint?: string };
+      console.error('Error details:', err.message, err.details, err.hint);
     } finally {
       setLoading(false);
     }
@@ -173,7 +174,7 @@ export function InvoicingView() {
     }]);
   };
 
-  const updateLineItem = (index: number, field: string, value: any) => {
+  const updateLineItem = (index: number, field: string, value: string | number | boolean) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
     setLineItems(updated);
@@ -245,8 +246,8 @@ export function InvoicingView() {
       }));
 
       const { error: lineItemsError } = await supabase
-        .from('invoice_line_items' as any)
-        .insert(lineItemsToInsert as any);
+        .from('invoice_line_items')
+        .insert(lineItemsToInsert);
 
       if (lineItemsError) throw lineItemsError;
 
@@ -313,7 +314,7 @@ export function InvoicingView() {
       console.log('Parts used found:', partsUsed);
 
       // Fetch part details separately
-      let partsDetails: any[] = [];
+      let partsDetails: Array<{ id: string; name: string; part_number: string; unit_price: number }> = [];
       if (partsUsed && partsUsed.length > 0) {
         const partIds = partsUsed.map(pu => pu.part_id);
         console.log('Fetching part details for IDs:', partIds);
@@ -340,7 +341,7 @@ export function InvoicingView() {
       });
 
       // Auto-populate line items
-      const items: any[] = [];
+      const items: Array<{ item_type: string; description: string; quantity: number; unit_price: number; taxable: boolean }> = [];
 
       // Add labor if hours_onsite exists
       if (ticket.hours_onsite && ticket.hours_onsite > 0) {
@@ -351,7 +352,8 @@ export function InvoicingView() {
           .eq('key', 'default_labor_rate')
           .maybeSingle();
 
-        const laborRate = (laborRateSetting as any)?.value ? parseFloat((laborRateSetting as any).value) : 85;
+        const settingValue = laborRateSetting as { value?: string } | null;
+        const laborRate = settingValue?.value ? parseFloat(settingValue.value) : 85;
 
         items.push({
           item_type: 'labor',
@@ -365,7 +367,7 @@ export function InvoicingView() {
       // Add parts used
       console.log('Processing parts - partsUsed length:', partsUsed?.length, 'partsDetails length:', partsDetails.length);
       if (partsUsed && partsUsed.length > 0 && partsDetails.length > 0) {
-        partsUsed.forEach((partUsed: any) => {
+        partsUsed.forEach((partUsed) => {
           const partDetail = partsDetails.find(p => p.id === partUsed.part_id);
           console.log('Looking for part:', partUsed.part_id, 'Found:', partDetail);
           if (partDetail) {
@@ -394,10 +396,11 @@ export function InvoicingView() {
       }
 
       setLineItems(items);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading ticket details:', error);
-      console.error('Error details:', error?.message, error?.details, error?.hint);
-      alert(`Failed to load ticket details: ${error?.message || 'Unknown error'}. Please try again.`);
+      const err = error as { message?: string; details?: string; hint?: string };
+      console.error('Error details:', err.message, err.details, err.hint);
+      alert(`Failed to load ticket details: ${err.message || 'Unknown error'}. Please try again.`);
     }
   };
 
@@ -418,7 +421,7 @@ export function InvoicingView() {
 
   const updateInvoiceStatus = async (invoiceId: string, newStatus: string) => {
     try {
-      const updates: any = { status: newStatus };
+      const updates: Partial<Database['public']['Tables']['invoices']['Update']> = { status: newStatus };
 
       if (newStatus === 'paid') {
         updates.paid_date = new Date().toISOString().split('T')[0];
@@ -1062,15 +1065,11 @@ function InvoiceDetailModal({
   onUpdateStatus: (id: string, status: string) => void;
   onDelete: (id: string) => void;
 }) {
-  const [lineItems, setLineItems] = useState<any[]>([]);
+  const [lineItems, setLineItems] = useState<Database['public']['Tables']['invoice_line_items']['Row'][]>([]);
   const [loading, setLoading] = useState(true);
   const [showEmailModal, setShowEmailModal] = useState(false);
 
-  useEffect(() => {
-    loadLineItems();
-  }, [invoice.id]);
-
-  const loadLineItems = async () => {
+  const loadLineItems = useCallback(async () => {
     try {
       console.log('Loading line items for invoice:', invoice.id);
       const { data, error } = await supabase
@@ -1090,7 +1089,11 @@ function InvoiceDetailModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [invoice.id]);
+
+  useEffect(() => {
+    loadLineItems();
+  }, [loadLineItems]);
 
   const handlePrint = () => {
     window.print();

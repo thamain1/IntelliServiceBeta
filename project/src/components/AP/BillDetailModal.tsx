@@ -45,7 +45,16 @@ export function BillDetailModal({
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
-  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  interface PaymentHistoryItem {
+    amount: number;
+    payment: {
+      id: string;
+      payment_number: string;
+      payment_date: string;
+      payment_method: string | null;
+    } | null;
+  }
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
   // Editable fields
@@ -63,6 +72,7 @@ export function BillDetailModal({
       loadAccounts();
       loadPaymentHistory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, bill?.id]);
 
   const loadBillDetails = async () => {
@@ -137,9 +147,9 @@ export function BillDetailModal({
 
       setIsEditing(false);
       onBillUpdated();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update bill:', err);
-      setError(err.message || 'Failed to update bill');
+      setError((err as Error).message || 'Failed to update bill');
     } finally {
       setLoading(false);
     }
@@ -154,9 +164,9 @@ export function BillDetailModal({
     try {
       await APService.postBill(bill.id);
       onBillUpdated();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to post bill:', err);
-      setError(err.message || 'Failed to post bill');
+      setError((err as Error).message || 'Failed to post bill');
     } finally {
       setLoading(false);
     }
@@ -175,9 +185,9 @@ export function BillDetailModal({
     try {
       await APService.voidBill(bill.id);
       onBillUpdated();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to void bill:', err);
-      setError(err.message || 'Failed to void bill');
+      setError((err as Error).message || 'Failed to void bill');
     } finally {
       setLoading(false);
     }
@@ -197,9 +207,9 @@ export function BillDetailModal({
       await APService.deleteBill(bill.id);
       onBillUpdated();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete bill:', err);
-      setError(err.message || 'Failed to delete bill');
+      setError((err as Error).message || 'Failed to delete bill');
     } finally {
       setLoading(false);
     }
@@ -215,7 +225,7 @@ export function BillDetailModal({
     }
   };
 
-  const updateLineItem = (index: number, field: keyof BillLineItem, value: any) => {
+  const updateLineItem = (index: number, field: keyof BillLineItem, value: string | number | undefined) => {
     const updated = [...editLineItems];
     updated[index] = { ...updated[index], [field]: value };
 
@@ -227,7 +237,7 @@ export function BillDetailModal({
   };
 
   const getStatusBadge = (status: BillStatus | string | null) => {
-    const styles: Record<string, { bg: string; text: string; icon: any }> = {
+    const styles: Record<string, { bg: string; text: string; icon: React.ComponentType<{ className?: string }> }> = {
       draft: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-300', icon: Edit3 },
       received: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-400', icon: Clock },
       approved: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-400', icon: Check },

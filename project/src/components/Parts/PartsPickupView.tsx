@@ -60,7 +60,7 @@ export function PartsPickupView() {
         .select('*');
 
       if (error) throw error;
-      setPickLists((data as any) || []);
+      setPickLists((data as unknown as PickList[]) || []);
     } catch (error) {
       console.error('Error loading pick lists:', error);
     } finally {
@@ -88,11 +88,13 @@ export function PartsPickupView() {
 
       if (error) throw error;
 
-      alert(`Successfully picked up ${(data as any)?.items_transferred ?? 0} item(s). Parts have been added to your truck inventory.`);
+      const result = data as unknown as { items_transferred?: number } | null;
+      alert(`Successfully picked up ${result?.items_transferred ?? 0} item(s). Parts have been added to your truck inventory.`);
       loadPickLists();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error picking up parts:', error);
-      alert(`Failed to pick up parts: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to pick up parts: ${message}`);
     } finally {
       setPickingUp(null);
     }

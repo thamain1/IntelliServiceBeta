@@ -1,6 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, CheckCircle, Download, ArrowRight } from 'lucide-react';
-import { ImportEntityType, DataImportService, ImportBatch } from '../../services/DataImportService';
+import {
+  ImportEntityType,
+  DataImportService,
+  ImportBatch,
+  ValidationError,
+  CustomerStagingRow,
+  ARStagingRow,
+  VendorStagingRow,
+  ItemStagingRow,
+  HistoryStagingRow,
+} from '../../services/DataImportService';
 import { supabase } from '../../lib/supabase';
 
 interface StepValidationProps {
@@ -21,26 +31,37 @@ interface ValidationStats {
 interface ErrorRow {
   row_number: number;
   errors: string[];
-  data: any;
+  data: Record<string, unknown>;
 }
+
+/** Generic staging row with common fields */
+interface StagingRowBase {
+  id: string;
+  row_number: number;
+  raw_row_json: Record<string, unknown>;
+}
+
+type StagingTableName =
+  | 'import_customers_staging'
+  | 'import_ar_staging'
+  | 'import_vendors_staging'
+  | 'import_items_staging'
+  | 'import_history_staging';
 
 export function StepValidation({
   entityType,
   importBatch,
-  // @ts-ignore - Parameter is part of interface contract but not used in this component
-  _stagingRowIds,
+  stagingRowIds: _stagingRowIds,
   onNext,
   onBack,
 }: StepValidationProps) {
+  // _stagingRowIds is part of interface contract but not used in this component
+  void _stagingRowIds;
   const [validating, setValidating] = useState(true);
   const [stats, setStats] = useState<ValidationStats>({ total: 0, valid: 0, errors: 0, warnings: 0 });
   const [errorRows, setErrorRows] = useState<ErrorRow[]>([]);
 
-  useEffect(() => {
-    validateStagingRows();
-  }, []);
-
-  const validateStagingRows = async () => {
+  const validateStagingRows = useCallback(async () => {
     setValidating(true);
 
     try {
@@ -51,14 +72,14 @@ export function StepValidation({
         items: 'import_items_staging',
         history: 'import_history_staging',
       };
-      const tableName = tableNameMap[entityType];
+      const tableName = tableNameMap[entityType] as StagingTableName | undefined;
       if (!tableName) {
         throw new Error(`Unknown entity type: ${entityType}`);
       }
 
       // Load all staging rows
       const { data: stagingRows, error } = await supabase
-        .from(tableName as any)
+        .from(tableName)
         .select('*')
         .eq('import_batch_id', importBatch.id)
         .order('row_number', { ascending: true });
@@ -89,19 +110,19 @@ export function StepValidation({
           }
         }
 
-        const row = stagingRows![i];
-        let validationErrors: { field: string; message: string }[] = [];
+        const row = stagingRows![i] as StagingRowBase;
+        let validationErrors: ValidationError[] = [];
 
         if (entityType === 'customers') {
-          validationErrors = DataImportService.validateCustomerRow(row as any);
+          validationErrors = DataImportService.validateCustomerRow(row as unknown as CustomerStagingRow);
         } else if (entityType === 'ar') {
-          validationErrors = DataImportService.validateARRow(row as any);
+          validationErrors = DataImportService.validateARRow(row as unknown as ARStagingRow);
         } else if (entityType === 'vendors') {
-          validationErrors = DataImportService.validateVendorRow(row as any);
+          validationErrors = DataImportService.validateVendorRow(row as unknown as VendorStagingRow);
         } else if (entityType === 'items') {
-          validationErrors = DataImportService.validateItemRow(row as any);
+          validationErrors = DataImportService.validateItemRow(row as unknown as ItemStagingRow);
         } else if (entityType === 'history') {
-          validationErrors = DataImportService.validateHistoryRow(row as any);
+          validationErrors = DataImportService.validateHistoryRow(row as unknown as HistoryStagingRow);
         } else {
           validationErrors = [];
         }
@@ -110,19 +131,19 @@ export function StepValidation({
         const validationStatus = validationErrors.length > 0 ? 'error' : 'valid';
 
         await supabase
-          .from(tableName as any)
+          .from(tableName)
           .update({
             validation_status: validationStatus,
             validation_errors: validationErrors,
           })
-          .eq('id', (row as any).id);
+          .eq('id', row.id);
 
         if (validationErrors.length > 0) {
           errorCount++;
           errors.push({
-            row_number: (row as any).row_number,
-            errors: validationErrors.map((e: any) => `${e.field}: ${e.message}`),
-            data: (row as any).raw_row_json,
+            row_number: row.row_number,
+            errors: validationErrors.map((e: ValidationError) => `${e.field}: ${e.message}`),
+            data: row.raw_row_json,
           });
         } else {
           validCount++;
@@ -151,20 +172,25 @@ export function StepValidation({
         rows_valid: validCount,
         rows_error: errorCount,
         status: errorCount === 0 ? 'validated' : 'validating',
-      } as any);
+      });
 
       await DataImportService.logImportEvent(
         importBatch.id,
         errorCount > 0 ? 'warning' : 'info',
         `Validation complete: ${validCount} valid, ${errorCount} errors`
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Validation error:', error);
-      alert('Failed to validate rows: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert('Failed to validate rows: ' + errorMessage);
     } finally {
       setValidating(false);
     }
-  };
+  }, [entityType, importBatch.id]);
+
+  useEffect(() => {
+    validateStagingRows();
+  }, [validateStagingRows]);
 
   const downloadErrorReport = () => {
     const csv = ['Row #,Errors,Data'].join('\n') + '\n' +

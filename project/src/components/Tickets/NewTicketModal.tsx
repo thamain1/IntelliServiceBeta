@@ -5,10 +5,41 @@ import { useAuth } from '../../contexts/AuthContext';
 import { AHSSettingsService } from '../../services/AHSSettingsService';
 import type { Database } from '../../lib/database.types';
 
-type Customer = Database['public']['Tables']['customers']['Row'];
+type CustomerRow = Database['public']['Tables']['customers']['Row'];
 type Equipment = Database['public']['Tables']['equipment']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type Project = Database['public']['Tables']['projects']['Row'];
+
+// Extended Customer type with site contact fields
+type Customer = CustomerRow & {
+  site_contact_name?: string | null;
+  site_contact_phone?: string | null;
+};
+
+// Ticket insert data structure
+interface TicketInsertData {
+  ticket_type: string;
+  customer_id: string;
+  priority: string;
+  title: string;
+  description: string;
+  service_type: string;
+  status: string;
+  created_by?: string;
+  project_id?: string;
+  equipment_id?: string;
+  assigned_to?: string;
+  scheduled_date?: string;
+  estimated_duration?: number;
+  phase_milestone?: string;
+  technician_notes?: string;
+  site_contact_name?: string;
+  site_contact_phone?: string;
+  problem_code?: string;
+  ahs_dispatch_number?: string;
+  ahs_diagnosis_fee_amount?: number;
+  ahs_labor_rate_per_hour?: number;
+}
 
 interface StandardCode {
   code: string;
@@ -108,11 +139,11 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
           .order('sort_order'),
       ]);
 
-      if (customersRes.data) setCustomers((customersRes.data as any));
-      if (equipmentRes.data) setEquipment((equipmentRes.data as any));
-      if (techniciansRes.data) setTechnicians((techniciansRes.data as any));
-      if (projectsRes.data) setProjects((projectsRes.data as any));
-      if (problemCodesRes.data) setProblemCodes((problemCodesRes.data as any));
+      if (customersRes.data) setCustomers(customersRes.data as Customer[]);
+      if (equipmentRes.data) setEquipment(equipmentRes.data);
+      if (techniciansRes.data) setTechnicians(techniciansRes.data);
+      if (projectsRes.data) setProjects(projectsRes.data);
+      if (problemCodesRes.data) setProblemCodes(problemCodesRes.data as StandardCode[]);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -123,7 +154,7 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
     setLoading(true);
 
     try {
-      const insertData: any = {
+      const insertData: TicketInsertData = {
         ticket_type: formData.ticket_type,
         customer_id: formData.customer_id,
         priority: formData.priority,
@@ -324,8 +355,8 @@ export function NewTicketModal({ isOpen, onClose, onSuccess, defaultType = 'SVC'
                   ...formData,
                   customer_id: customerId,
                   equipment_id: '',
-                  site_contact_name: (customer as any)?.site_contact_name || '',
-                  site_contact_phone: (customer as any)?.site_contact_phone || '',
+                  site_contact_name: customer?.site_contact_name || '',
+                  site_contact_phone: customer?.site_contact_phone || '',
                 });
                 setSelectedCustomer(customerId);
               }}

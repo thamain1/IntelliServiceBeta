@@ -1,7 +1,10 @@
 import { supabase } from '../lib/supabase';
 import { AHSSettingsService } from './AHSSettingsService';
 import { AHSTicketService } from './AHSTicketService';
-import type { TablesInsert } from '../lib/dbTypes';
+import type { TablesInsert, Tables } from '../lib/dbTypes';
+
+// Composite type for invoice summary returned by getTicketInvoices
+type InvoiceSummary = Pick<Tables<'invoices'>, 'id' | 'invoice_number' | 'customer_id' | 'total_amount' | 'status' | 'created_at'>;
 
 export interface BillingBreakdown {
   ahsTotal: number;
@@ -421,7 +424,7 @@ export class AHSInvoiceService {
    */
   static async getTicketInvoices(
     ticketId: string
-  ): Promise<{ ahsInvoices: any[]; customerInvoices: any[] }> {
+  ): Promise<{ ahsInvoices: InvoiceSummary[]; customerInvoices: InvoiceSummary[] }> {
     try {
       const { data: invoices, error } = await supabase
         .from('invoices')
@@ -444,8 +447,8 @@ export class AHSInvoiceService {
       // Get AHS bill-to customer ID
       const defaults = await AHSSettingsService.getAHSDefaults();
 
-      const ahsInvoices: any[] = [];
-      const customerInvoices: any[] = [];
+      const ahsInvoices: InvoiceSummary[] = [];
+      const customerInvoices: InvoiceSummary[] = [];
 
       for (const invoice of invoices || []) {
         if (defaults.billToCustomerId && invoice.customer_id === defaults.billToCustomerId) {

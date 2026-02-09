@@ -36,6 +36,7 @@ export function CustomerValueInsight() {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadMetrics = async () => {
@@ -246,7 +247,7 @@ export function CustomerValueInsight() {
                     }}
                     itemStyle={{ color: '#F9FAFB' }}
                     labelStyle={{ color: '#F9FAFB' }}
-                    formatter={((value: number) => [`$${value.toLocaleString()}`, 'Revenue']) as any}
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue'] as unknown as [string, string]}
                   />
                   <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
                     {metrics.customers.slice(0, 10).map((_, index) => (

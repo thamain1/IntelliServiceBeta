@@ -12,6 +12,7 @@ type LaborRateProfile = {
   standard_hours_end: string;
   description: string;
   notes: string;
+  updated_at?: string;
 };
 
 export function LaborRatesSettings() {
@@ -42,7 +43,7 @@ export function LaborRatesSettings() {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        setProfile((data as any));
+        setProfile(data);
         setFormData({
           standard_rate: Number(data.standard_rate),
           after_hours_rate: Number(data.after_hours_rate),
@@ -274,9 +275,9 @@ export function LaborRatesSettings() {
 
       <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="text-sm text-gray-600 dark:text-gray-400">
-          {profile && (profile as any).updated_at && (
+          {profile && profile.updated_at && (
             <span>
-              Last updated: {new Date((profile as any).updated_at).toLocaleString()}
+              Last updated: {new Date(profile.updated_at).toLocaleString()}
             </span>
           )}
         </div>

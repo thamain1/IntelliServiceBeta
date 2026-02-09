@@ -29,7 +29,7 @@ export function LoginForm() {
       } else {
         await signIn(email, password);
       }
-    } catch (err: any) {
+    } catch (_err: unknown) {
       setError(isSignUp ? 'Failed to create account. Email may already be in use.' : 'Invalid email or password');
     } finally {
       setLoading(false);
@@ -120,7 +120,7 @@ export function LoginForm() {
                 <select
                   id="role"
                   value={role}
-                  onChange={(e) => setRole(e.target.value as any)}
+                  onChange={(e) => setRole(e.target.value as 'admin' | 'dispatcher' | 'technician')}
                   className="input"
                   required
                 >

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Search, FolderKanban, Calendar, DollarSign, TrendingUp, Clock, X, Building2, Layers, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import type { Tables } from '../../lib/dbTypes';
 import { ProjectDetailView } from './ProjectDetailView';
 import { MasterProjectView } from './MasterProjectView';
 
@@ -12,6 +13,9 @@ type Project = Database['public']['Tables']['projects']['Row'] & {
   parent_project?: { project_number: string; name: string };
 };
 
+type Customer = Pick<Tables<'customers'>, 'id' | 'name'>;
+type Manager = Pick<Tables<'profiles'>, 'id' | 'full_name'>;
+
 export function ProjectsView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,8 +24,8 @@ export function ProjectsView() {
   const [projectTypeFilter, setProjectTypeFilter] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [managers, setManagers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [managers, setManagers] = useState<Manager[]>([]);
   const [formData, setFormData] = useState({
     project_number: '',
     name: '',
@@ -58,7 +62,7 @@ export function ProjectsView() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProjects((data as any) || []);
+      setProjects((data as unknown as Project[]) || []);
     } catch (error) {
       console.error('Error loading projects:', error);
     } finally {
@@ -171,9 +175,10 @@ export function ProjectsView() {
       if (error) throw error;
 
       loadProjects();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting project:', error);
-      if (error.message?.includes('foreign key')) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('foreign key')) {
         alert('Cannot delete this project because it has associated records (tickets, invoices, etc.). Please remove those first.');
       } else {
         alert('Failed to delete project. Please try again.');
@@ -625,7 +630,7 @@ export function ProjectsView() {
                   </label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as typeof formData.status })}
                     className="input"
                   >
                     <option value="planning">Planning</option>
@@ -642,7 +647,7 @@ export function ProjectsView() {
                   </label>
                   <select
                     value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as typeof formData.priority })}
                     className="input"
                   >
                     <option value="low">Low</option>

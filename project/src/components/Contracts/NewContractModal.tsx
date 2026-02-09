@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, FileText, Calendar, DollarSign } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import type { Database } from '../../lib/database.types';
+import type { Tables, Enums } from '../../lib/dbTypes';
 
-type ContractPlan = Database['public']['Tables']['contract_plans']['Row'];
-type Customer = Database['public']['Tables']['customers']['Row'];
-type CustomerLocation = Database['public']['Tables']['customer_locations']['Row'];
+type ContractPlan = Tables<'contract_plans'>;
+type Customer = Tables<'customers'>;
+type CustomerLocation = Tables<'customer_locations'>;
+type ContractStatus = Enums<'service_contract_status'>;
 
 interface NewContractModalProps {
   onClose: () => void;
@@ -31,33 +32,22 @@ export function NewContractModal({ onClose, preselectedCustomerId }: NewContract
     status: 'draft' as const,
   });
 
-  useEffect(() => {
-    loadData();
+  const loadCustomerLocations = useCallback(async (customerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('customer_locations')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('name');
+
+      if (error) throw error;
+      setLocations(data || []);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+    }
   }, []);
 
-  useEffect(() => {
-    if (formData.customer_id) {
-      loadCustomerLocations(formData.customer_id);
-    } else {
-      setLocations([]);
-    }
-  }, [formData.customer_id]);
-
-  useEffect(() => {
-    const selectedPlan = plans.find((p) => p.id === formData.contract_plan_id);
-    if (selectedPlan && formData.customer_id) {
-      const customer = customers.find((c) => c.id === formData.customer_id);
-      if (customer) {
-        setFormData((prev) => ({
-          ...prev,
-          name: `${customer.name} - ${selectedPlan.name} ${new Date().getFullYear()}`,
-          base_fee: selectedPlan.default_base_fee?.toString() || '0',
-        }));
-      }
-    }
-  }, [formData.contract_plan_id, formData.customer_id, plans, customers]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [plansResult, customersResult] = await Promise.all([
         supabase.from('contract_plans').select('*').eq('is_active', true).order('name'),
@@ -75,22 +65,33 @@ export function NewContractModal({ onClose, preselectedCustomerId }: NewContract
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadCustomerLocations = async (customerId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('customer_locations')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('name');
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-      if (error) throw error;
-      setLocations(data || []);
-    } catch (error) {
-      console.error('Error loading locations:', error);
+  useEffect(() => {
+    if (formData.customer_id) {
+      loadCustomerLocations(formData.customer_id);
+    } else {
+      setLocations([]);
     }
-  };
+  }, [formData.customer_id, loadCustomerLocations]);
+
+  useEffect(() => {
+    const selectedPlan = plans.find((p) => p.id === formData.contract_plan_id);
+    if (selectedPlan && formData.customer_id) {
+      const customer = customers.find((c) => c.id === formData.customer_id);
+      if (customer) {
+        setFormData((prev) => ({
+          ...prev,
+          name: `${customer.name} - ${selectedPlan.name} ${new Date().getFullYear()}`,
+          base_fee: selectedPlan.default_base_fee?.toString() || '0',
+        }));
+      }
+    }
+  }, [formData.contract_plan_id, formData.customer_id, plans, customers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,9 +140,9 @@ export function NewContractModal({ onClose, preselectedCustomerId }: NewContract
 
       alert('Contract created successfully!');
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating contract:', error);
-      alert(`Failed to create contract: ${error.message}`);
+      alert(`Failed to create contract: ${(error as Error).message}`);
     } finally {
       setSaving(false);
     }
@@ -208,7 +209,7 @@ export function NewContractModal({ onClose, preselectedCustomerId }: NewContract
                 <option value="">All locations</option>
                 {locations.map((location) => (
                   <option key={location.id} value={location.id}>
-                    {(location as any).location_name || (location as any).name || 'Unnamed Location'}
+                    {location.location_name || location.name || 'Unnamed Location'}
                   </option>
                 ))}
               </select>
@@ -298,7 +299,7 @@ export function NewContractModal({ onClose, preselectedCustomerId }: NewContract
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as ContractStatus })}
                 className="input"
               >
                 <option value="draft">Draft</option>

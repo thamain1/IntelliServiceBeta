@@ -1,4 +1,25 @@
 import { supabase } from '../lib/supabase';
+import { Tables } from '../lib/dbTypes';
+
+// Composite type for equipment with joined customer_locations data
+type EquipmentWithLocation = Pick<
+  Tables<'equipment'>,
+  | 'id'
+  | 'equipment_type'
+  | 'manufacturer'
+  | 'model_number'
+  | 'serial_number'
+  | 'installation_date'
+  | 'warranty_expiration'
+  | 'warranty_status'
+  | 'is_active'
+  | 'location_id'
+> & {
+  customer_locations: Pick<
+    Tables<'customer_locations'>,
+    'id' | 'location_name' | 'address' | 'city' | 'state' | 'zip_code'
+  >;
+};
 
 export interface CustomerFinancialSummary {
   total_revenue_lifetime: number;
@@ -179,7 +200,7 @@ export async function getCustomerInstalledEquipment(
   const locationMap = new Map<string, CustomerEquipmentByLocation>();
 
   for (const item of equipmentList) {
-    const loc = item.customer_locations as any;
+    const loc = (item as unknown as EquipmentWithLocation).customer_locations;
     const locationId = loc.id;
     const locationName = loc.location_name || 'Unknown Location';
     const locationAddress = [

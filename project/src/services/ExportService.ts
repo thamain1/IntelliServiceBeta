@@ -3,6 +3,10 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
+interface JsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: { finalY: number };
+}
+
 export interface ExportColumn {
   header: string;
   key: string;
@@ -15,8 +19,8 @@ export interface ExportData {
   subtitle?: string;
   dateRange?: { start: Date; end: Date };
   columns: ExportColumn[];
-  rows: Record<string, any>[];
-  summary?: Record<string, any>;
+  rows: Record<string, unknown>[];
+  summary?: Record<string, unknown>;
   generatedAt?: Date;
 }
 
@@ -86,7 +90,7 @@ export class ExportService {
 
     // Add summary if present
     if (data.summary) {
-      const finalY = (doc as any).lastAutoTable.finalY || yPos;
+      const finalY = (doc as unknown as JsPDFWithAutoTable).lastAutoTable?.finalY || yPos;
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
@@ -141,7 +145,7 @@ export class ExportService {
           return value;
         }
         if (col.format === 'date' && value) {
-          return new Date(value);
+          return new Date(value as string | number | Date);
         }
         return value;
       })
@@ -265,7 +269,7 @@ export class ExportService {
   /**
    * Format a value based on its type
    */
-  static formatValue(value: any, format?: string): string {
+  static formatValue(value: unknown, format?: string): string {
     if (value === null || value === undefined) {
       return '';
     }
@@ -274,7 +278,7 @@ export class ExportService {
       case 'currency':
         return this.formatCurrency(Number(value));
       case 'date':
-        return this.formatDate(new Date(value));
+        return this.formatDate(new Date(value as string | number | Date));
       case 'number':
         return Number(value).toLocaleString();
       case 'percent':
@@ -334,11 +338,11 @@ export class ExportService {
   /**
    * Get column styles for PDF table
    */
-  private static getColumnStyles(columns: ExportColumn[]): Record<number, any> {
-    const styles: Record<number, any> = {};
-    columns.forEach((col, index) => {
-      if (col.format === 'currency' || col.format === 'number' || col.format === 'percent') {
-        styles[index] = { halign: 'right' };
+  private static getColumnStyles(columns: ExportColumn[]): Record<string, { halign: 'left' | 'center' | 'right' | 'justify' }> {
+    const styles: Record<string, { halign: 'left' | 'center' | 'right' | 'justify' }> = {};
+    columns.forEach((_col, index) => {
+      if (_col.format === 'currency' || _col.format === 'number' || _col.format === 'percent') {
+        styles[index.toString()] = { halign: 'right' };
       }
     });
     return styles;

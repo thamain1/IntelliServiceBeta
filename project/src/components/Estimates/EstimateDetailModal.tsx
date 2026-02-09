@@ -68,6 +68,16 @@ type ConversionInfo = {
   };
 };
 
+type ConvertEstimateResult = {
+  success?: boolean;
+  already_converted?: boolean;
+  target_type?: string;
+  ticket_number?: string;
+  project_number?: string;
+  initial_ticket_number?: string;
+  error?: string;
+};
+
 interface EstimateDetailModalProps {
   estimateId: string | null;
   isOpen: boolean;
@@ -84,10 +94,17 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
   const [showSendModal, setShowSendModal] = useState(false);
   const [estimate, setEstimate] = useState<EstimateDetail | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [parts, setParts] = useState<any[]>([]);
-  const [equipment, setEquipment] = useState<any[]>([]);
+  const [parts, setParts] = useState<Array<{ id: string; name: string; cost?: number | null }>>([]);
+  const [equipment, setEquipment] = useState<Array<{ id: string; manufacturer: string | null; model_number: string | null }>>([]);
   const [laborRates, setLaborRates] = useState<Array<{ key: string; name: string; rate: number }>>([]);
-  const [linkStatus, setLinkStatus] = useState<any>(null);
+  const [linkStatus, setLinkStatus] = useState<{
+    last_viewed_at?: string;
+    view_count?: number;
+    decision?: string;
+    decided_name?: string;
+    decided_at?: string;
+    decision_comment?: string;
+  } | null>(null);
   const [conversionInfo, setConversionInfo] = useState<ConversionInfo | null>(null);
   const [refreshingCosts, setRefreshingCosts] = useState(false);
   const [ahsTicketData, setAhsTicketData] = useState<{
@@ -101,6 +118,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
       loadEstimateDetails();
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, estimateId]);
 
   const loadData = async () => {
@@ -139,7 +157,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
     try {
       const [estimateRes, lineItemsRes] = await Promise.all([
         (supabase
-          .from('estimates') as any)
+          .from('estimates') as unknown as ReturnType<typeof supabase.from>)
           .select(`
             *,
             customers(name, email, phone, address),
@@ -162,7 +180,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
       await Promise.all([loadLinkStatus(), loadConversionInfo()]);
 
       // Check if estimate is linked to an AHS ticket
-      const ticketId = (estimateRes.data as any).ticket_id;
+      const ticketId = (estimateRes.data as unknown as { ticket_id?: string }).ticket_id;
       if (ticketId) {
         const ahsData = await AHSTicketService.getAHSTicketData(ticketId);
         if (ahsData && AHSTicketService.isAHSTicket(ahsData.ticketType)) {
@@ -230,7 +248,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
 
       if (error) throw error;
 
-      const result = data as any;
+      const result = data as unknown as { success?: boolean; updated_count?: number; error?: string };
       if (result?.success) {
         await loadEstimateDetails();
         alert(`Updated costs for ${result.updated_count} part line(s)`);
@@ -269,7 +287,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
     return { ahsTotal, customerTotal };
   };
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
+  const updateLineItem = (id: string, field: keyof LineItem, value: string | number | boolean | null) => {
     setLineItems(lineItems.map(item => {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
@@ -408,8 +426,8 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
 
       if (lineItemsToInsert.length > 0) {
         const { data: insertedItems, error: lineItemsError } = await supabase
-          .from('estimate_line_items' as any)
-          .insert(lineItemsToInsert as any)
+          .from('estimate_line_items')
+          .insert(lineItemsToInsert)
           .select();
 
         if (lineItemsError) {
@@ -442,7 +460,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
 
     try {
       setSaving(true);
-      const updateData: any = { status: newStatus };
+      const updateData: { status: string; sent_date?: string; accepted_date?: string; rejected_date?: string } = { status: newStatus };
 
       if (newStatus === 'sent') {
         updateData.sent_date = new Date().toISOString();
@@ -486,7 +504,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
 
       if (error) throw error;
 
-      const result = data as any;
+      const result = data as unknown as ConvertEstimateResult;
       if (result?.success) {
         if (result.already_converted) {
           alert(`This estimate was already converted to ${result.target_type === 'service_ticket' ? 'ticket' : 'project'}`);
@@ -520,7 +538,7 @@ export function EstimateDetailModal({ estimateId, isOpen, onClose, onSuccess }: 
 
       if (error) throw error;
 
-      const result = data as any;
+      const result = data as unknown as ConvertEstimateResult;
       if (result?.success) {
         if (result.already_converted) {
           alert(`This estimate was already converted to ${result.target_type === 'service_ticket' ? 'ticket' : 'project'}`);

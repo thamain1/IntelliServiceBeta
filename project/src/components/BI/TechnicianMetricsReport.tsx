@@ -20,6 +20,24 @@ interface TechMetrics {
   }>;
 }
 
+interface TimeLogRecord {
+  user_id: string;
+  ticket_id: string | null;
+  total_hours: number | null;
+}
+
+interface InvoiceRecord {
+  ticket_id: string | null;
+  total_amount: number | null;
+}
+
+interface TicketRecord {
+  id: string;
+  assigned_to: string;
+  status: string;
+  profiles: { full_name: string } | null;
+}
+
 export function TechnicianMetricsReport() {
   const { dateRange, setDateRange, start, end } = useBIDateRange();
   const [metrics, setMetrics] = useState<TechMetrics>({
@@ -33,6 +51,7 @@ export function TechnicianMetricsReport() {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadMetrics = async () => {
@@ -65,7 +84,7 @@ export function TechnicianMetricsReport() {
 
       // Build lookup maps
       const hoursMap = new Map<string, number>();
-      timeLogs?.forEach((log: any) => {
+      (timeLogs as unknown as TimeLogRecord[] | null)?.forEach((log) => {
         if (log.ticket_id) {
           const existing = hoursMap.get(log.ticket_id) || 0;
           hoursMap.set(log.ticket_id, existing + Number(log.total_hours || 0));
@@ -73,7 +92,7 @@ export function TechnicianMetricsReport() {
       });
 
       const revenueMap = new Map<string, number>();
-      invoices?.forEach((inv: any) => {
+      (invoices as unknown as InvoiceRecord[] | null)?.forEach((inv) => {
         if (inv.ticket_id) {
           revenueMap.set(inv.ticket_id, Number(inv.total_amount || 0));
         }
@@ -93,7 +112,7 @@ export function TechnicianMetricsReport() {
         { name: string; tickets: number; hours: number; revenue: number }
       > = {};
 
-      tickets?.forEach((ticket: any) => {
+      (tickets as unknown as TicketRecord[] | null)?.forEach((ticket) => {
         const techId = ticket.assigned_to;
         const techName = ticket.profiles?.full_name || 'Unknown';
 

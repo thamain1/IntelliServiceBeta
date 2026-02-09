@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { Views } from '../lib/dbTypes';
 
 export interface VendorApKpis {
   vendorId: string | null;
@@ -61,15 +62,15 @@ export class VendorPaymentHistoryService {
         throw new Error(`Failed to fetch vendor AP KPIs: ${error.message}`);
       }
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: Views<'vw_vendor_ap_kpis'>) => ({
         vendorId: row.vendor_id,
         vendorName: row.vendor_name || 'Unknown Vendor',
-        totalPaid: parseFloat(row.total_paid || 0),
-        pendingBalance: parseFloat(row.pending_balance || 0),
-        overdueBalance: parseFloat(row.overdue_balance || 0),
-        billCount: parseInt(row.bill_count || 0),
-        paidBillCount: parseInt(row.paid_bill_count || 0),
-        overdueBillCount: parseInt(row.overdue_bill_count || 0),
+        totalPaid: parseFloat(String(row.total_paid || 0)),
+        pendingBalance: parseFloat(String(row.pending_balance || 0)),
+        overdueBalance: parseFloat(String(row.overdue_balance || 0)),
+        billCount: parseInt(String(row.bill_count || 0)),
+        paidBillCount: parseInt(String(row.paid_bill_count || 0)),
+        overdueBillCount: parseInt(String(row.overdue_bill_count || 0)),
       }));
     } catch (error) {
       console.error('Error in getVendorApKpis:', error);
@@ -115,23 +116,23 @@ export class VendorPaymentHistoryService {
         throw new Error(`Failed to fetch payment history: ${error.message}`);
       }
 
-      return (data || []).map((row: any) => ({
-        documentId: row.document_id,
-        documentType: row.document_type,
-        vendorId: row.vendor_id,
+      return (data || []).map((row: Views<'vw_vendor_payment_history'>) => ({
+        documentId: row.document_id || '',
+        documentType: (row.document_type || 'bill') as 'bill' | 'payment',
+        vendorId: row.vendor_id || '',
         vendorName: row.vendor_name || 'Unknown Vendor',
-        documentNumber: row.document_number,
-        documentDate: row.document_date,
+        documentNumber: row.document_number || '',
+        documentDate: row.document_date || '',
         dueDate: row.due_date,
-        amount: parseFloat(row.amount || 0),
-        openBalance: parseFloat(row.open_balance || 0),
-        status: row.status,
+        amount: parseFloat(String(row.amount || 0)),
+        openBalance: parseFloat(String(row.open_balance || 0)),
+        status: row.status || '',
         paymentMethod: row.payment_method,
         reference: row.reference,
         category: row.category,
         description: row.description,
         isOverdue: row.is_overdue || false,
-        createdAt: row.created_at,
+        createdAt: row.created_at || '',
       }));
     } catch (error) {
       console.error('Error in getVendorPaymentHistory:', error);

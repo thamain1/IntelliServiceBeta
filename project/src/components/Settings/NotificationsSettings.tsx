@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react';
 import { Bell, Mail, MessageSquare, Clock, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
+interface UserPreferenceRow {
+  id?: string;
+  user_id: string;
+  preferences: {
+    notifications?: NotificationPreferences;
+    [key: string]: unknown;
+  };
+}
+
 interface NotificationPreferences {
   // Email Notifications
   email_ticket_assigned: boolean;
@@ -71,15 +80,16 @@ export function NotificationsSettings() {
       if (!userData.user) return;
 
       const { data, error } = await supabase
-        .from('user_preferences' as any)
-        .select('preferences' as any)
+        .from('user_preferences')
+        .select('preferences')
         .eq('user_id', userData.user.id)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
 
-      if (data && 'preferences' in data && (data as any).preferences?.notifications) {
-        setPreferences({ ...DEFAULT_PREFERENCES, ...(data as any).preferences.notifications });
+      const prefData = data as unknown as UserPreferenceRow | null;
+      if (prefData?.preferences?.notifications) {
+        setPreferences({ ...DEFAULT_PREFERENCES, ...prefData.preferences.notifications });
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
@@ -98,25 +108,26 @@ export function NotificationsSettings() {
 
       // Check if preferences exist
       const { data: existing } = await supabase
-        .from('user_preferences' as any)
-        .select('id, preferences' as any)
+        .from('user_preferences')
+        .select('id, preferences')
         .eq('user_id', userData.user.id)
         .maybeSingle();
 
+      const existingData = existing as unknown as UserPreferenceRow | null;
       const newPreferences = {
-        ...(existing && 'preferences' in existing ? (existing as any).preferences : {}),
+        ...(existingData?.preferences || {}),
         notifications: preferences,
       };
 
-      if (existing) {
+      if (existingData) {
         await supabase
-          .from('user_preferences' as any)
+          .from('user_preferences')
           .update({ preferences: newPreferences })
           .eq('user_id', userData.user.id);
       } else {
         await supabase
-          .from('user_preferences' as any)
-          .insert({ user_id: userData.user.id, preferences: newPreferences } as any);
+          .from('user_preferences')
+          .insert({ user_id: userData.user.id, preferences: newPreferences });
       }
 
       setMessage({ type: 'success', text: 'Notification preferences saved!' });

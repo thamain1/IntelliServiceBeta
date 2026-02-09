@@ -1,4 +1,84 @@
 import { supabase } from '../lib/supabase';
+import { Tables, Views } from '../lib/dbTypes';
+
+// Composite types for joined queries
+type PartInventoryWithParts = Tables<'part_inventory'> & {
+  parts: Pick<Tables<'parts'>, 'part_number' | 'name'> | null;
+};
+
+type PartInventoryWithPartsAndManufacturer = Tables<'part_inventory'> & {
+  parts: Pick<Tables<'parts'>, 'part_number' | 'name' | 'manufacturer'> | null;
+};
+
+type SerializedPartWithParts = Tables<'serialized_parts'> & {
+  parts: Pick<Tables<'parts'>, 'part_number' | 'name'> | null;
+};
+
+type SerializedPartWithPartsAndLocation = Tables<'serialized_parts'> & {
+  parts: Pick<Tables<'parts'>, 'part_number' | 'name'> | null;
+  stock_locations: Pick<Tables<'stock_locations'>, 'name' | 'location_type'> | null;
+};
+
+// Type for the vehicle inventory report return value
+interface VehicleInventoryReport {
+  vehicle: {
+    id: string;
+    name: string;
+    locationCode: string | null;
+    assignedTo: string | null;
+  };
+  nonSerializedInventory: PartInventoryWithPartsAndManufacturer[];
+  serializedInventory: Views<'serialized_parts_available_stock'>[];
+  totalNonSerializedUnits: number;
+  totalSerializedUnits: number;
+}
+
+interface VehicleInventoryError {
+  error: string;
+}
+
+// Types for diagnostic details
+interface InventoryMismatch {
+  partNumber: string | null;
+  name: string;
+  partsTableQty: number | null;
+  inventoryTableQty: number;
+}
+
+interface VehicleReport {
+  vehicle: string;
+  nonSerializedCount: number;
+  nonSerializedTotalQty: number;
+  serializedCount: number;
+  items: Array<{
+    type: 'non-serialized' | 'serialized';
+    partNumber: string | null | undefined;
+    partName: string | null | undefined;
+    quantity?: number;
+    serialNumber?: string;
+    status?: string | null;
+  }>;
+}
+
+interface SerializedPartIssue {
+  serialNumber: string;
+  partNumber: string | null | undefined;
+  issue: string;
+}
+
+interface InstalledPartInStock {
+  serialNumber: string;
+  partNumber: string | null | undefined;
+  currentLocation: string;
+  issue: string;
+}
+
+type DiagnosticDetails =
+  | InventoryMismatch[]
+  | VehicleReport[]
+  | SerializedPartIssue[]
+  | InstalledPartInStock[]
+  | string[];
 
 export interface DiagnosticReport {
   timestamp: string;
@@ -10,7 +90,7 @@ export interface DiagnosticCheck {
   name: string;
   status: 'PASS' | 'FAIL' | 'WARNING';
   message: string;
-  details?: any;
+  details?: DiagnosticDetails;
 }
 
 export class InventoryDiagnostics {
@@ -34,7 +114,8 @@ export class InventoryDiagnostics {
   }
 
   private async checkInventorySync(): Promise<DiagnosticCheck> {
-    const { data, error } = await supabase.rpc('check_inventory_sync' as any, {}, {
+    const rpcFn = supabase.rpc as unknown as (name: string, args: Record<string, unknown>, options?: { count: 'exact' }) => Promise<unknown>;
+    const { data, error } = await rpcFn('check_inventory_sync', {}, {
       count: 'exact',
     }).then(() =>
       supabase.from('parts').select(`
@@ -53,7 +134,7 @@ export class InventoryDiagnostics {
       };
     }
 
-    const mismatches: any[] = [];
+    const mismatches: InventoryMismatch[] = [];
 
     for (const part of data || []) {
       const { data: invData } = await supabase
@@ -105,7 +186,7 @@ export class InventoryDiagnostics {
       };
     }
 
-    const vehicleReports: any[] = [];
+    const vehicleReports: VehicleReport[] = [];
 
     for (const vehicle of vehicles || []) {
       const { data: inventory } = await supabase
@@ -113,26 +194,30 @@ export class InventoryDiagnostics {
         .select('part_id, quantity, parts(part_number, name)')
         .eq('stock_location_id', vehicle.id);
 
-      const { data: serialized } = await (supabase
-        .from('serialized_parts') as any)
+      const serializedTableName = 'serialized_parts';
+      const { data: serialized } = await supabase
+        .from(serializedTableName as unknown as 'parts')
         .select('id, serial_number, status, parts(part_number, name)')
         .eq('current_location_id', vehicle.id)
         .in('status', ['in_stock', 'in_transit']);
 
+      const typedInventory = inventory as unknown as PartInventoryWithParts[] | null;
+      const typedSerialized = serialized as unknown as SerializedPartWithParts[] | null;
+
       vehicleReports.push({
         vehicle: vehicle.name,
-        nonSerializedCount: (inventory || []).length,
-        nonSerializedTotalQty: (inventory || []).reduce((sum, inv) => sum + inv.quantity, 0),
-        serializedCount: (serialized || []).length,
+        nonSerializedCount: (typedInventory || []).length,
+        nonSerializedTotalQty: (typedInventory || []).reduce((sum, inv) => sum + inv.quantity, 0),
+        serializedCount: (typedSerialized || []).length,
         items: [
-          ...(inventory || []).map((inv: any) => ({
-            type: 'non-serialized',
+          ...(typedInventory || []).map((inv) => ({
+            type: 'non-serialized' as const,
             partNumber: inv.parts?.part_number,
             partName: inv.parts?.name,
             quantity: inv.quantity,
           })),
-          ...(serialized || []).map((ser: any) => ({
-            type: 'serialized',
+          ...(typedSerialized || []).map((ser) => ({
+            type: 'serialized' as const,
             partNumber: ser.parts?.part_number,
             partName: ser.parts?.name,
             serialNumber: ser.serial_number,
@@ -151,8 +236,9 @@ export class InventoryDiagnostics {
   }
 
   private async checkSerializedPartsLocationStatus(): Promise<DiagnosticCheck> {
-    const { data, error } = await (supabase
-      .from('serialized_parts') as any)
+    const serializedTableName = 'serialized_parts';
+    const { data, error } = await supabase
+      .from(serializedTableName as unknown as 'parts')
       .select('id, serial_number, status, current_location_id, installed_on_equipment_id, parts(part_number, name)');
 
     if (error) {
@@ -163,13 +249,14 @@ export class InventoryDiagnostics {
       };
     }
 
-    const issues: any[] = [];
+    const issues: SerializedPartIssue[] = [];
+    const typedData = data as unknown as SerializedPartWithParts[] | null;
 
-    for (const part of data || []) {
+    for (const part of typedData || []) {
       if (part.status === 'in_stock' && !part.current_location_id) {
         issues.push({
           serialNumber: part.serial_number,
-          partNumber: (part.parts as any)?.part_number,
+          partNumber: part.parts?.part_number,
           issue: 'Marked as in_stock but has no current_location_id',
         });
       }
@@ -177,7 +264,7 @@ export class InventoryDiagnostics {
       if (part.status === 'installed' && !part.installed_on_equipment_id) {
         issues.push({
           serialNumber: part.serial_number,
-          partNumber: (part.parts as any)?.part_number,
+          partNumber: part.parts?.part_number,
           issue: 'Marked as installed but has no installed_on_equipment_id',
         });
       }
@@ -185,7 +272,7 @@ export class InventoryDiagnostics {
       if (part.status === 'in_stock' && part.installed_on_equipment_id) {
         issues.push({
           serialNumber: part.serial_number,
-          partNumber: (part.parts as any)?.part_number,
+          partNumber: part.parts?.part_number,
           issue: 'Marked as in_stock but still has installed_on_equipment_id',
         });
       }
@@ -208,8 +295,11 @@ export class InventoryDiagnostics {
   }
 
   private async checkInstalledPartsNotInStock(): Promise<DiagnosticCheck> {
-    const { data, error } = await (supabase
-      .from('serialized_parts') as any)
+    type QueryResult = { data: SerializedPartWithPartsAndLocation[] | null; error: { message: string } | null };
+    const fromFn = supabase.from as unknown as (table: string) => {
+      select: (columns: string) => { eq: (col: string, val: string) => Promise<QueryResult> };
+    };
+    const { data, error } = await fromFn('serialized_parts')
       .select(`
         id,
         serial_number,
@@ -229,15 +319,15 @@ export class InventoryDiagnostics {
       };
     }
 
-    const installedInStock: any[] = [];
+    const installedInStock: InstalledPartInStock[] = [];
 
     for (const part of data || []) {
       if (part.current_location_id && part.status === 'installed') {
-        const loc = part.stock_locations as any;
+        const loc = part.stock_locations;
         if (loc && (loc.location_type === 'warehouse' || loc.location_type === 'truck')) {
           installedInStock.push({
             serialNumber: part.serial_number,
-            partNumber: (part.parts as any)?.part_number,
+            partNumber: part.parts?.part_number,
             currentLocation: loc.name,
             issue: 'Installed part still has warehouse/truck location',
           });
@@ -262,11 +352,12 @@ export class InventoryDiagnostics {
   }
 
   private async checkDuplicateInventoryRecords(): Promise<DiagnosticCheck> {
+    const rpcFn = supabase.rpc as unknown as (name: string, args: Record<string, unknown>, options?: { count: 'exact' }) => Promise<unknown>;
     const { data, error } = await supabase
       .from('part_inventory')
       .select('part_id, stock_location_id, count')
       .then(() =>
-        supabase.rpc('check_duplicate_inventory' as any, {}, { count: 'exact' }).then(() =>
+        rpcFn('check_duplicate_inventory', {}, { count: 'exact' }).then(() =>
           supabase.from('part_inventory').select('part_id, stock_location_id')
         )
       );
@@ -306,7 +397,7 @@ export class InventoryDiagnostics {
     };
   }
 
-  async getVehicleInventoryReport(vehicleName: string): Promise<any> {
+  async getVehicleInventoryReport(vehicleName: string): Promise<VehicleInventoryReport | VehicleInventoryError> {
     const { data: vehicle } = await supabase
       .from('stock_locations')
       .select('*')
@@ -330,6 +421,9 @@ export class InventoryDiagnostics {
       .select('*')
       .eq('current_location_id', vehicle.id);
 
+    const typedNonSerialized = nonSerialized as unknown as PartInventoryWithPartsAndManufacturer[] | null;
+    const typedSerialized = serialized as Views<'serialized_parts_available_stock'>[] | null;
+
     return {
       vehicle: {
         id: vehicle.id,
@@ -337,10 +431,10 @@ export class InventoryDiagnostics {
         locationCode: vehicle.location_code,
         assignedTo: vehicle.technician_id,
       },
-      nonSerializedInventory: nonSerialized || [],
-      serializedInventory: serialized || [],
-      totalNonSerializedUnits: (nonSerialized || []).reduce((sum, inv) => sum + inv.quantity, 0),
-      totalSerializedUnits: (serialized || []).length,
+      nonSerializedInventory: typedNonSerialized || [],
+      serializedInventory: typedSerialized || [],
+      totalNonSerializedUnits: (typedNonSerialized || []).reduce((sum, inv) => sum + inv.quantity, 0),
+      totalSerializedUnits: (typedSerialized || []).length,
     };
   }
 }

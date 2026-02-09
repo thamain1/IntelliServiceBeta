@@ -6,7 +6,13 @@ import { CustomerDetailModal } from './CustomerDetailModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { GeocodingService } from '../../services/GeocodingService';
 
-type Customer = Database['public']['Tables']['customers']['Row'];
+type CustomerRow = Database['public']['Tables']['customers']['Row'];
+
+// Extended Customer type with site contact fields
+type Customer = CustomerRow & {
+  site_contact_name?: string | null;
+  site_contact_phone?: string | null;
+};
 
 export function CustomersView() {
   const { profile } = useAuth();
@@ -596,8 +602,8 @@ export function CustomersView() {
               state: selectedCustomer.state || '',
               zip_code: selectedCustomer.zip_code || '',
               notes: selectedCustomer.notes || '',
-              site_contact_name: (selectedCustomer as any).site_contact_name || '',
-              site_contact_phone: (selectedCustomer as any).site_contact_phone || '',
+              site_contact_name: selectedCustomer.site_contact_name || '',
+              site_contact_phone: selectedCustomer.site_contact_phone || '',
             });
           }}
           onDelete={async () => {

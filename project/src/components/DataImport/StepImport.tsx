@@ -2,6 +2,49 @@ import { useState } from 'react';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { ImportEntityType, DataImportService, ImportBatch } from '../../services/DataImportService';
 import { supabase } from '../../lib/supabase';
+import { TablesInsert, TablesUpdate } from '../../lib/dbTypes';
+
+/** Type for staging row data from Supabase queries */
+interface StagingRow extends Record<string, unknown> {
+  id: string;
+  row_number: number;
+  raw_row_json: Record<string, unknown>;
+  external_customer_id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  notes?: string;
+  validation_status?: string;
+  external_invoice_number?: string;
+  invoice_amount?: number;
+  balance_due?: number;
+  issue_date?: string;
+  due_date?: string;
+  vendor_code?: string;
+  external_vendor_id?: string;
+  postal_code?: string;
+  payment_terms?: string;
+  tax_id?: string;
+  sku?: string;
+  description?: string;
+  category?: string;
+  unit_cost?: string | number;
+  unit_price?: string | number;
+  reorder_point?: string | number;
+  external_item_id?: string;
+  record_type?: string;
+  document_number?: string;
+  document_date?: string;
+  amount?: string | number;
+  status?: string;
+  priority?: string;
+  ticket_type?: string;
+  completed_date?: string;
+}
 
 interface StepImportProps {
   entityType: ImportEntityType;
@@ -42,7 +85,7 @@ export function StepImport({
     try {
       await DataImportService.updateImportBatch(importBatch.id, {
         status: 'importing',
-      } as any);
+      } as unknown as Partial<ImportBatch>);
 
       if (entityType === 'customers') {
         await importCustomers();
@@ -60,7 +103,7 @@ export function StepImport({
         status: 'completed',
         completed_at: new Date().toISOString(),
         rows_imported: summary.created + summary.updated,
-      } as any);
+      } as unknown as Partial<ImportBatch>);
 
       await DataImportService.logImportEvent(
         importBatch.id,
@@ -70,22 +113,23 @@ export function StepImport({
 
       setProgress({ ...progress, status: 'completed', message: 'Import completed successfully!' });
       setCompleted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Import error:', error);
 
       await DataImportService.updateImportBatch(importBatch.id, {
         status: 'failed',
-        error_summary: error.message,
+        error_summary: errorMessage,
         completed_at: new Date().toISOString(),
-      } as any);
+      } as unknown as Partial<ImportBatch>);
 
       await DataImportService.logImportEvent(
         importBatch.id,
         'error',
-        'Import failed: ' + error.message
+        'Import failed: ' + errorMessage
       );
 
-      setProgress({ ...progress, status: 'failed', message: 'Import failed: ' + error.message });
+      setProgress({ ...progress, status: 'failed', message: 'Import failed: ' + errorMessage });
     } finally {
       setImporting(false);
     }
@@ -110,7 +154,7 @@ export function StepImport({
 
     let created = 0;
     let updated = 0;
-    let skipped = 0;
+    const _skipped = 0;
     let errors = 0;
 
     for (let i = 0; i < (stagingRows || []).length; i++) {
@@ -127,7 +171,7 @@ export function StepImport({
         }
       }
 
-      const row = stagingRows![i];
+      const row = stagingRows![i] as StagingRow;
 
       try {
         // Check for existing customer
@@ -183,7 +227,7 @@ export function StepImport({
               external_customer_id: row.external_customer_id,
               import_batch_id: importBatch.id,
               imported_at: new Date().toISOString(),
-            } as any])
+            } as unknown as TablesInsert<'customers'>])
             .select()
             .single();
 
@@ -199,7 +243,8 @@ export function StepImport({
 
           created++;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`Error importing customer row ${row.row_number}:`, error);
         errors++;
 
@@ -207,7 +252,7 @@ export function StepImport({
           importBatch.id,
           'error',
           `Failed to import customer at row ${row.row_number}`,
-          { error: error.message, row: row.raw_row_json }
+          { error: errorMessage, row: row.raw_row_json }
         );
       }
 
@@ -226,7 +271,7 @@ export function StepImport({
       }
     }
 
-    setSummary({ created, updated, skipped, errors });
+    setSummary({ created, updated, skipped: _skipped, errors });
   };
 
   const importAR = async () => {
@@ -264,7 +309,7 @@ export function StepImport({
         }
       }
 
-      const row = stagingRows![i];
+      const row = stagingRows![i] as StagingRow;
 
       try {
         // Find customer by external_customer_id
@@ -314,7 +359,7 @@ export function StepImport({
             import_batch_id: importBatch.id,
             imported_at: new Date().toISOString(),
             created_by: userId,
-          } as any])
+          } as unknown as TablesInsert<'invoices'>])
           .select()
           .single();
 
@@ -330,7 +375,8 @@ export function StepImport({
           .eq('id', row.id);
 
         created++;
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`Error importing AR row ${row.row_number}:`, error);
         errors++;
 
@@ -338,7 +384,7 @@ export function StepImport({
           importBatch.id,
           'error',
           `Failed to import AR at row ${row.row_number}`,
-          { error: error.message, row: row.raw_row_json }
+          { error: errorMessage, row: row.raw_row_json }
         );
       }
 
@@ -378,7 +424,7 @@ export function StepImport({
 
     let created = 0;
     let updated = 0;
-    let skipped = 0;
+    const _skipped = 0;
     let errors = 0;
 
     for (let i = 0; i < (stagingRows || []).length; i++) {
@@ -389,7 +435,7 @@ export function StepImport({
         }
       }
 
-      const row = stagingRows![i];
+      const row = stagingRows![i] as StagingRow;
 
       try {
         // Check for existing vendor by vendor_code or external_vendor_id
@@ -453,7 +499,7 @@ export function StepImport({
               notes: row.notes ?? undefined,
               external_vendor_id: row.external_vendor_id,
               import_batch_id: importBatch.id,
-            } as any])
+            } as unknown as TablesInsert<'vendors'>])
             .select()
             .single();
 
@@ -466,7 +512,7 @@ export function StepImport({
 
           created++;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Error importing vendor row ${row.row_number}:`, error);
         errors++;
       }
@@ -485,7 +531,7 @@ export function StepImport({
       }
     }
 
-    setSummary({ created, updated, skipped, errors });
+    setSummary({ created, updated, skipped: _skipped, errors });
   };
 
   const importItems = async () => {
@@ -506,7 +552,7 @@ export function StepImport({
 
     let created = 0;
     let updated = 0;
-    let skipped = 0;
+    const _skipped = 0;
     let errors = 0;
 
     for (let i = 0; i < (stagingRows || []).length; i++) {
@@ -517,7 +563,7 @@ export function StepImport({
         }
       }
 
-      const row = stagingRows![i];
+      const row = stagingRows![i] as StagingRow;
 
       try {
         // Check for existing part by SKU
@@ -542,7 +588,7 @@ export function StepImport({
               unit_cost: row.unit_cost ? parseFloat(String(row.unit_cost)) : undefined,
               unit_price: row.unit_price ? parseFloat(String(row.unit_price)) : undefined,
               reorder_point: row.reorder_point ? parseInt(String(row.reorder_point)) : undefined,
-            } as any)
+            } as unknown as TablesUpdate<'parts'>)
             .eq('id', existingPart.id);
 
           await supabase
@@ -559,12 +605,12 @@ export function StepImport({
               sku: row.sku ?? null,
               description: row.description ?? undefined,
               category: row.category ?? undefined,
-              unit_cost: row.unit_cost ? parseFloat(String(row.unit_cost)) : (undefined as any),
-              unit_price: row.unit_price ? parseFloat(String(row.unit_price)) : (undefined as any),
-              reorder_point: row.reorder_point ? parseInt(String(row.reorder_point)) : (undefined as any),
+              unit_cost: row.unit_cost ? parseFloat(String(row.unit_cost)) : undefined,
+              unit_price: row.unit_price ? parseFloat(String(row.unit_price)) : undefined,
+              reorder_point: row.reorder_point ? parseInt(String(row.reorder_point)) : undefined,
               external_item_id: row.external_item_id,
               import_batch_id: importBatch.id,
-            } as any])
+            } as unknown as TablesInsert<'parts'>])
             .select()
             .single();
 
@@ -577,7 +623,7 @@ export function StepImport({
 
           created++;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Error importing item row ${row.row_number}:`, error);
         errors++;
       }
@@ -596,7 +642,7 @@ export function StepImport({
       }
     }
 
-    setSummary({ created, updated, skipped, errors });
+    setSummary({ created, updated, skipped: _skipped, errors });
   };
 
   const importHistory = async () => {
@@ -616,7 +662,7 @@ export function StepImport({
     });
 
     let created = 0;
-    let skipped = 0;
+    let _skipped = 0;
     let errors = 0;
 
     const { data: userData } = await supabase.auth.getUser();
@@ -630,7 +676,7 @@ export function StepImport({
         }
       }
 
-      const row = stagingRows![i];
+      const row = stagingRows![i] as StagingRow;
 
       try {
         // Find customer
@@ -655,14 +701,14 @@ export function StepImport({
               external_invoice_number: row.document_number,
               invoice_date: row.document_date ?? new Date().toISOString().split('T')[0],
               due_date: (row.due_date ?? row.document_date) ?? new Date().toISOString().split('T')[0],
-              subtotal: row.amount ? parseFloat(String(row.amount)) : (undefined as any),
-              total_amount: row.amount ? parseFloat(String(row.amount)) : (undefined as any),
+              subtotal: row.amount ? parseFloat(String(row.amount)) : undefined,
+              total_amount: row.amount ? parseFloat(String(row.amount)) : undefined,
               balance_due: 0,
               status: row.status ?? 'paid',
               is_historical: true,
               import_batch_id: importBatch.id,
               created_by: userId,
-            } as any])
+            } as unknown as TablesInsert<'invoices'>])
             .select()
             .single();
 
@@ -691,7 +737,7 @@ export function StepImport({
               completed_date: row.completed_date ?? row.document_date,
               is_historical: true,
               import_batch_id: importBatch.id,
-            } as any])
+            } as unknown as TablesInsert<'tickets'>])
             .select()
             .single();
 
@@ -708,9 +754,9 @@ export function StepImport({
           created++;
         } else if (recordType === 'payment') {
           // Payments need to be linked to invoices - skip if no matching invoice
-          skipped++;
+          _skipped++;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Error importing history row ${row.row_number}:`, error);
         errors++;
       }
@@ -729,7 +775,7 @@ export function StepImport({
       }
     }
 
-    setSummary({ created, updated: 0, skipped, errors });
+    setSummary({ created, updated: 0, skipped: _skipped, errors });
   };
 
   return (

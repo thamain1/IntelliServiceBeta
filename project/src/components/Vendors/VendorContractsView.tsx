@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { FileText, Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, XCircle, type LucideIcon } from 'lucide-react';
 import { VendorContractService } from '../../services/VendorContractService';
 import type { Database } from '../../lib/database.types';
 import { NewVendorContractModal } from './NewVendorContractModal';
@@ -31,6 +31,7 @@ export function VendorContractsView({ vendorId, showVendorColumn = true }: Vendo
   useEffect(() => {
     loadContracts();
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId, statusFilter, typeFilter, searchTerm]);
 
   const loadContracts = async () => {
@@ -59,7 +60,7 @@ export function VendorContractsView({ vendorId, showVendorColumn = true }: Vendo
   };
 
   const getStatusBadge = (status: string | null) => {
-    const badges: Record<string, { className: string; icon: any }> = {
+    const badges: Record<string, { className: string; icon: LucideIcon }> = {
       active: { className: 'badge badge-green', icon: CheckCircle },
       draft: { className: 'badge badge-gray', icon: Clock },
       expired: { className: 'badge badge-orange', icon: AlertCircle },

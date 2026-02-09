@@ -36,8 +36,9 @@ export function WarehouseLocationsView() {
 
   const loadLocations = async () => {
     try {
+      // Complex query with alias requires type assertion
       const { data, error } = await (supabase
-        .from('stock_locations') as any)
+        .from('stock_locations') as unknown as { select: (s: string) => ReturnType<typeof supabase.from> })
         .select('*, profiles:technician_id(full_name)')
         .order('location_type', { ascending: true })
         .order('name', { ascending: true });
@@ -71,7 +72,7 @@ export function WarehouseLocationsView() {
     e.preventDefault();
 
     try {
-      const insertData: any = {
+      const insertData: Record<string, string | boolean | null> = {
         name: formData.name,
         location_type: formData.location_type,
         address: formData.address || null,
@@ -248,7 +249,7 @@ export function WarehouseLocationsView() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      location_type: e.target.value as any,
+                      location_type: e.target.value as 'warehouse' | 'truck' | 'customer_site' | 'project_site' | 'vendor',
                     })
                   }
                   className="input"

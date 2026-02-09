@@ -21,6 +21,19 @@ interface LaborMetrics {
   }>;
 }
 
+interface TimeLogRecord {
+  user_id: string;
+  ticket_id: string | null;
+  clock_in_time: string;
+  clock_out_time: string | null;
+  total_hours: number | null;
+  profiles: { full_name: string; role: string } | null;
+  tickets: { title: string } | null;
+}
+
+type TooltipFormatterValue = [string];
+type TooltipFormatter = (value: number, name: string) => TooltipFormatterValue;
+
 export function LaborEfficiencyInsight() {
   const { dateRange, setDateRange, start, end } = useBIDateRange();
   const [metrics, setMetrics] = useState<LaborMetrics>({
@@ -35,6 +48,7 @@ export function LaborEfficiencyInsight() {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadMetrics = async () => {
@@ -67,16 +81,17 @@ export function LaborEfficiencyInsight() {
       > = {};
 
       // Process all completed time logs (all roles)
-      (timeLogs || []).forEach((log: any) => {
-        if (!log.clock_out_time) return;
+      (timeLogs || []).forEach((log: unknown) => {
+        const timeLog = log as unknown as TimeLogRecord;
+        if (!timeLog.clock_out_time) return;
 
         // Use total_hours if available, otherwise calculate
-        const hours = log.total_hours ||
-          (new Date(log.clock_out_time).getTime() - new Date(log.clock_in_time).getTime()) /
+        const hours = timeLog.total_hours ||
+          (new Date(timeLog.clock_out_time).getTime() - new Date(timeLog.clock_in_time).getTime()) /
           (1000 * 60 * 60);
 
         // Time logged against a ticket is considered billable
-        const isBillable = !!log.ticket_id;
+        const isBillable = !!timeLog.ticket_id;
 
         if (isBillable) {
           billableHours += hours;
@@ -89,8 +104,8 @@ export function LaborEfficiencyInsight() {
         // Estimate labor cost at $35/hr (typical tech cost)
         laborCost += hours * 35;
 
-        const techId = log.user_id;
-        const techName = log.profiles?.full_name || 'Unknown';
+        const techId = timeLog.user_id;
+        const techName = timeLog.profiles?.full_name || 'Unknown';
 
         if (!techStats[techId]) {
           techStats[techId] = { name: techName, billable: 0, nonBillable: 0 };
@@ -271,7 +286,7 @@ export function LaborEfficiencyInsight() {
                     }}
                     itemStyle={{ color: '#F9FAFB' }}
                     labelStyle={{ color: '#F9FAFB' }}
-                    formatter={((value: number) => [`${value} hrs`]) as any}
+                    formatter={((value: number) => [`${value} hrs`]) as unknown as TooltipFormatter}
                   />
                   <Legend />
                   <Bar dataKey="billable" name="Billable" fill="#3B82F6" radius={[4, 4, 0, 0]} />

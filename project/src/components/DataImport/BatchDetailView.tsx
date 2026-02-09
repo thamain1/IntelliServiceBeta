@@ -7,7 +7,22 @@ import {
   BatchLogEvent,
   ImportPhase,
   RollbackResult,
+  ImportEntityType,
 } from '../../services/DataImportService';
+
+// Interface for validation errors in import rows
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
+// Interface for import staging rows with common fields
+interface ImportStagingRow {
+  row_number: number;
+  validation_errors?: ValidationError[];
+  raw_row_json?: Record<string, unknown>;
+  [key: string]: unknown;
+}
 
 interface BatchDetailViewProps {
   batchId: string;
@@ -22,14 +37,16 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
   const [batch, setBatch] = useState<ImportBatch | null>(null);
   const [progress, setProgress] = useState<BatchProgress | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('preview');
-  const [previewRows, setPreviewRows] = useState<any[]>([]);
-  const [errorRows, setErrorRows] = useState<any[]>([]);
+  const [previewRows, setPreviewRows] = useState<ImportStagingRow[]>([]);
+  const [errorRows, setErrorRows] = useState<ImportStagingRow[]>([]);
   const [logs, setLogs] = useState<BatchLogEvent[]>([]);
   const [polling, setPolling] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
 
   useEffect(() => {
     loadBatchDetails();
+    // loadBatchDetails is intentionally excluded to prevent infinite re-renders since it depends on state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchId]);
 
   useEffect(() => {
@@ -47,6 +64,8 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
     } else {
       setPolling(false);
     }
+    // loadBatchProgress is stable and only needs to run when phase changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress?.phase]);
 
   const isInProgress = (phase: ImportPhase): boolean => {
@@ -85,11 +104,11 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
   const loadTabData = async (tab: TabType, entityType: string) => {
     try {
       if (tab === 'preview') {
-        const data = await DataImportService.getBatchPreviewRows(batchId, entityType as any);
-        setPreviewRows(data);
+        const data = await DataImportService.getBatchPreviewRows(batchId, entityType as unknown as ImportEntityType);
+        setPreviewRows(data as unknown as ImportStagingRow[]);
       } else if (tab === 'errors') {
-        const data = await DataImportService.getBatchErrorRows(batchId, entityType as any);
-        setErrorRows(data);
+        const data = await DataImportService.getBatchErrorRows(batchId, entityType as unknown as ImportEntityType);
+        setErrorRows(data as unknown as ImportStagingRow[]);
       } else if (tab === 'logs') {
         const data = await DataImportService.getBatchLogs(batchId);
         setLogs(data);
@@ -119,9 +138,10 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
       alert('Import cancelled successfully');
       if (onRefresh) onRefresh();
       await loadBatchDetails();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error cancelling import:', error);
-      alert('Failed to cancel import: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert('Failed to cancel import: ' + errorMessage);
     } finally {
       setActionInProgress(null);
     }
@@ -153,9 +173,10 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
 
       if (onRefresh) onRefresh();
       await loadBatchDetails();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error rolling back import:', error);
-      alert('Failed to rollback import: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert('Failed to rollback import: ' + errorMessage);
     } finally {
       setActionInProgress(null);
     }
@@ -181,9 +202,10 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
       alert('Import batch deleted successfully');
       if (onRefresh) onRefresh();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting import batch:', error);
-      alert('Failed to delete import batch: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert('Failed to delete import batch: ' + errorMessage);
     } finally {
       setActionInProgress(null);
     }
@@ -484,7 +506,7 @@ export function BatchDetailView({ batchId, onClose, onRefresh }: BatchDetailView
   );
 }
 
-function PreviewTab({ previewRows, entityType }: { previewRows: any[]; entityType: string }) {
+function PreviewTab({ previewRows, entityType }: { previewRows: ImportStagingRow[]; entityType: string }) {
   if (previewRows.length === 0) {
     return (
       <div className="text-center py-12">
@@ -549,7 +571,7 @@ function PreviewTab({ previewRows, entityType }: { previewRows: any[]; entityTyp
   );
 }
 
-function ErrorsTab({ errorRows }: { errorRows: any[]; entityType: string }) {
+function ErrorsTab({ errorRows, entityType: _entityType }: { errorRows: ImportStagingRow[]; entityType: string }) {
   if (errorRows.length === 0) {
     return (
       <div className="text-center py-12">
@@ -591,7 +613,7 @@ function ErrorsTab({ errorRows }: { errorRows: any[]; entityType: string }) {
                   Validation Errors:
                 </p>
                 <ul className="text-sm text-red-600 dark:text-red-400 space-y-1">
-                  {row.validation_errors.map((error: any, i: number) => (
+                  {row.validation_errors.map((error: ValidationError, i: number) => (
                     <li key={i}>• {error.field}: {error.message}</li>
                   ))}
                 </ul>

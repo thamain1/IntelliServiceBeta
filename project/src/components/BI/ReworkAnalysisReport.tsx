@@ -23,6 +23,14 @@ interface ReworkRecord {
   days_between: number;
 }
 
+interface ProfileData {
+  full_name: string | null;
+}
+
+interface CustomerData {
+  name: string | null;
+}
+
 interface TechReworkStats {
   technician_id: string;
   technician_name: string;
@@ -57,6 +65,7 @@ export function ReworkAnalysisReport() {
 
   useEffect(() => {
     loadReworkData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadReworkData = async () => {
@@ -95,7 +104,7 @@ export function ReworkAnalysisReport() {
         if (t.assigned_to) {
           if (!techCallbacks[t.assigned_to]) {
             techCallbacks[t.assigned_to] = {
-              name: (t.profiles as any)?.full_name || 'Unknown',
+              name: (t.profiles as unknown as ProfileData)?.full_name || 'Unknown',
               callbacks: 0,
               completed: 0,
             };
@@ -138,8 +147,8 @@ export function ReworkAnalysisReport() {
               callback_problem: callback.problem_code,
               callback_date: callback.created_at || new Date().toISOString(),
               technician_id: original.assigned_to,
-              technician_name: (original.profiles as any)?.full_name || null,
-              customer_name: (original.customers as any)?.name || null,
+              technician_name: (original.profiles as unknown as ProfileData)?.full_name || null,
+              customer_name: (original.customers as unknown as CustomerData)?.name || null,
               days_between: daysBetween,
             });
 
@@ -163,7 +172,7 @@ export function ReworkAnalysisReport() {
 
       // Calculate tech stats
       const techStatsArray: TechReworkStats[] = Object.entries(techCallbacks)
-        .filter(([_, stats]) => stats.completed > 0)
+        .filter(([_id, stats]) => stats.completed > 0)
         .map(([id, stats]) => ({
           technician_id: id,
           technician_name: stats.name,
@@ -310,7 +319,7 @@ export function ReworkAnalysisReport() {
                       <XAxis type="number" domain={[0, 'auto']} unit="%" />
                       <YAxis dataKey="technician_name" type="category" tick={{ fontSize: 12 }} width={80} />
                       <Tooltip
-                        formatter={((value: number) => [`${value.toFixed(1)}%`, 'Callback Rate']) as any}
+                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Callback Rate']}
                         labelFormatter={(label) => `Tech: ${label}`}
                       />
                       <Bar dataKey="callback_rate" fill="#ef4444" name="Callback Rate" />

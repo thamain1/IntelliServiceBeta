@@ -32,6 +32,7 @@ export function DSOInsight() {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadMetrics = async () => {
@@ -246,7 +247,7 @@ export function DSOInsight() {
                     }}
                     itemStyle={{ color: '#F9FAFB' }}
                     labelStyle={{ color: '#F9FAFB' }}
-                    formatter={((value: number) => [`$${value.toLocaleString()}`, 'Amount']) as any}
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount'] as unknown as [string, string]}
                   />
                   <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
                     {metrics.agingBuckets.map((_, index) => (

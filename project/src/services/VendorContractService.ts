@@ -1,11 +1,16 @@
 import { supabase } from '../lib/supabase';
-import type { Database } from '../lib/database.types';
+import type { Tables, TablesInsert } from '../lib/dbTypes';
 
-type VendorContract = Database['public']['Tables']['vendor_contracts']['Row'] & {
-  vendors?: { name: string; vendor_code: string };
+/** Base vendor contract row type */
+type VendorContractRow = Tables<'vendor_contracts'>;
+
+/** Vendor contract with joined vendor data from query */
+type VendorContractWithVendor = VendorContractRow & {
+  vendors?: { name: string; vendor_code: string } | null;
 };
 
-type VendorContractSLA = Database['public']['Tables']['vendor_contract_slas']['Row'];
+/** SLA row type */
+type VendorContractSLA = Tables<'vendor_contract_slas'>;
 
 export interface ContractFilters {
   vendorId?: string;
@@ -21,7 +26,7 @@ export interface ContractStats {
 }
 
 export class VendorContractService {
-  static async listContracts(filters: ContractFilters = {}): Promise<VendorContract[]> {
+  static async listContracts(filters: ContractFilters = {}): Promise<VendorContractWithVendor[]> {
     try {
       let query = supabase
         .from('vendor_contracts')
@@ -154,7 +159,7 @@ export class VendorContractService {
       } else {
         const { data, error } = await supabase
           .from('vendor_contract_slas')
-          .insert(sla as Database['public']['Tables']['vendor_contract_slas']['Insert'])
+          .insert(sla as unknown as TablesInsert<'vendor_contract_slas'>)
           .select()
           .single();
 

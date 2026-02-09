@@ -55,7 +55,7 @@ export function EquipmentView() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEquipment((data as unknown as any[]) || []);
+      setEquipment((data as Equipment[]) || []);
     } catch (error) {
       console.error('Error loading equipment:', error);
     } finally {
@@ -73,7 +73,7 @@ export function EquipmentView() {
         .order('installation_date', { ascending: false });
 
       if (error) throw error;
-      setInstalledParts((data as unknown as any[]) || []);
+      setInstalledParts((data as InstalledPart[]) || []);
     } catch (error) {
       console.error('Error loading installed parts:', error);
       setInstalledParts([]);

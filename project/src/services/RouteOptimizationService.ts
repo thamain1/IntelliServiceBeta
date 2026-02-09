@@ -278,12 +278,12 @@ export class RouteOptimizationService {
           timeSaved: Math.round(totalTimeBefore - totalTimeAfter),
         },
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('[RouteOptimization] Error:', error);
       return {
         success: false,
         routes: [],
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

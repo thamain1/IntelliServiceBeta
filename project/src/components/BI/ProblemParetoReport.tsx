@@ -27,6 +27,9 @@ interface SummaryStats {
   salesOpportunities: number;
 }
 
+type ParetoTooltipFormatterValue = [string, string] | [string | number, string];
+type ParetoTooltipFormatter = (value: number, name: string) => ParetoTooltipFormatterValue;
+
 export function ProblemParetoReport() {
   const { dateRange, setDateRange, start, end } = useBIDateRange();
   const [paretoData, setParetoData] = useState<ParetoData[]>([]);
@@ -41,6 +44,7 @@ export function ProblemParetoReport() {
 
   useEffect(() => {
     loadParetoData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadParetoData = async () => {
@@ -271,11 +275,11 @@ export function ProblemParetoReport() {
                     <YAxis yAxisId="left" />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" />
                     <Tooltip
-                      formatter={((value: any, name: string) => {
+                      formatter={((value: number, name: string) => {
                         if (name === 'Count') return [value, 'Occurrences'];
                         if (name === 'Cumulative %') return [`${value.toFixed(1)}%`, 'Cumulative'];
                         return [value, name];
-                      }) as any}
+                      }) as unknown as ParetoTooltipFormatter}
                     />
                     <Legend />
                     <Bar yAxisId="left" dataKey="ticket_count" name="Count" fill="#3b82f6" />

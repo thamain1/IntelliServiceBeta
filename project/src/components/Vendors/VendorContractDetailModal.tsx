@@ -8,6 +8,29 @@ type VendorContract = Database['public']['Tables']['vendor_contracts']['Row'] & 
   vendors?: { name: string; vendor_code: string };
 };
 
+interface ContractItem {
+  id: string;
+  part_id: string;
+  parts?: { part_number: string; name: string };
+}
+
+interface ContractSLA {
+  id: string;
+  metric: string;
+  metric_description: string | null;
+  target_value: number;
+  target_unit: string;
+  breach_threshold: number | null;
+  notes: string | null;
+}
+
+interface ContractDocument {
+  id: string;
+  document_type: string;
+  file_name: string;
+  file_url: string;
+}
+
 interface VendorContractDetailModalProps {
   contract: VendorContract;
   onClose: () => void;
@@ -38,11 +61,11 @@ export function VendorContractDetailModal({ contract: initialContract, onClose }
     notes: contract.notes || '',
   });
 
-  const [items, setItems] = useState<any[]>([]);
-  const [slas, setSlas] = useState<any[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [items, setItems] = useState<ContractItem[]>([]);
+  const [slas, setSlas] = useState<ContractSLA[]>([]);
+  const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
-  const [editingSLA, setEditingSLA] = useState<any | null>(null);
+  const [editingSLA, setEditingSLA] = useState<ContractSLA | null>(null);
   const [showNewSLAForm, setShowNewSLAForm] = useState(false);
   const [slaFormData, setSlaFormData] = useState({
     metric: 'on_time_delivery',
@@ -61,6 +84,7 @@ export function VendorContractDetailModal({ contract: initialContract, onClose }
     } else if (activeTab === 'documents') {
       loadContractDocuments();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, contract.id]);
 
   const loadContractItems = async () => {
@@ -101,7 +125,7 @@ export function VendorContractDetailModal({ contract: initialContract, onClose }
     try {
       await VendorContractService.upsertSLA({
         vendor_contract_id: contract.id,
-        metric: slaFormData.metric as any,
+        metric: slaFormData.metric,
         metric_description: slaFormData.metric_description || null,
         target_value: parseFloat(slaFormData.target_value),
         target_unit: slaFormData.target_unit,
@@ -138,7 +162,7 @@ export function VendorContractDetailModal({ contract: initialContract, onClose }
     }
   };
 
-  const handleEditSLA = (sla: any) => {
+  const handleEditSLA = (sla: ContractSLA) => {
     setEditingSLA(sla);
     setSlaFormData({
       metric: sla.metric,

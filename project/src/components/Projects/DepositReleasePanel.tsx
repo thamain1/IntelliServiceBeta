@@ -27,8 +27,7 @@ interface DepositRelease {
 }
 
 export function DepositReleasePanel({ projectId }: DepositReleasePanelProps) {
-  // @ts-ignore - profile is available from context but not used in this component
-  const { _profile } = useAuth();
+  useAuth();
   const [summary, setSummary] = useState<DepositSummary | null>(null);
   const [releases, setReleases] = useState<DepositRelease[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,12 +35,13 @@ export function DepositReleasePanel({ projectId }: DepositReleasePanelProps) {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadData = async () => {
     try {
       const depositSummary = await MilestoneInvoiceService.getProjectDepositSummary(projectId);
-      setSummary(depositSummary as any);
+      setSummary(depositSummary as DepositSummary);
 
       const { data: releasesData, error: releasesError } = await supabase
         .from('project_deposit_releases')
@@ -50,7 +50,7 @@ export function DepositReleasePanel({ projectId }: DepositReleasePanelProps) {
         .order('release_date', { ascending: false });
 
       if (releasesError) throw releasesError;
-      setReleases((releasesData as any) || []);
+      setReleases((releasesData as DepositRelease[]) || []);
     } catch (error) {
       console.error('Error loading deposit data:', error);
     } finally {
@@ -298,9 +298,9 @@ function ReleaseDepositModal({
 
       alert(`Deposit of ${formatCurrency(amount)} released successfully!`);
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error releasing deposit:', error);
-      alert(`Failed to release deposit: ${error.message || 'Unknown error'}`);
+      alert(`Failed to release deposit: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

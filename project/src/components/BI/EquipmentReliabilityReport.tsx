@@ -50,6 +50,7 @@ export function EquipmentReliabilityReport() {
 
   useEffect(() => {
     loadReliabilityData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadReliabilityData = async () => {
@@ -321,7 +322,7 @@ export function EquipmentReliabilityReport() {
                     />
                     <YAxis label={{ value: 'Days', angle: -90, position: 'insideLeft' }} />
                     <Tooltip
-                      formatter={((value: number) => [`${value.toFixed(0)} days`, 'Avg MTBF']) as any}
+                      formatter={(value: number) => [`${value.toFixed(0)} days`, 'Avg MTBF']}
                     />
                     <Bar dataKey="avg_mtbf" name="Avg MTBF" fill="#22c55e" />
                   </BarChart>

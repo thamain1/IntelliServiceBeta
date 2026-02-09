@@ -1,5 +1,17 @@
 import { supabase } from '../lib/supabase';
 import { AHSSettingsService } from './AHSSettingsService';
+import { TicketUpdate } from '../lib/dbTypes';
+
+/** Joined audit log entry with performer profile */
+interface AuditLogWithPerformer {
+  id: string;
+  action: string;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  performed_at: string | null;
+  notes: string | null;
+  performer: { full_name: string | null } | null;
+}
 
 export interface AHSTicketData {
   id: string;
@@ -23,8 +35,8 @@ export interface DiagnosisFeeResult {
 export interface AHSAuditEntry {
   id: string;
   action: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
   performedBy: string;
   performedAt: string;
   notes: string | null;
@@ -216,7 +228,7 @@ export class AHSTicketService {
         .eq('id', ticketId)
         .maybeSingle();
 
-      const updateFields: any = {};
+      const updateFields: TicketUpdate = {};
       if (updates.diagnosisFee !== undefined) {
         updateFields.ahs_diagnosis_fee_amount = updates.diagnosisFee;
       }
@@ -310,15 +322,18 @@ export class AHSTicketService {
         return [];
       }
 
-      return (data || []).map((entry) => ({
-        id: entry.id,
-        action: entry.action,
-        oldValue: entry.old_value,
-        newValue: entry.new_value,
-        performedBy: (entry.performer as any)?.full_name || 'Unknown',
-        performedAt: entry.performed_at || new Date().toISOString(),
-        notes: entry.notes,
-      }));
+      return (data || []).map((entry) => {
+        const typedEntry = entry as unknown as AuditLogWithPerformer;
+        return {
+          id: typedEntry.id,
+          action: typedEntry.action,
+          oldValue: typedEntry.old_value,
+          newValue: typedEntry.new_value,
+          performedBy: typedEntry.performer?.full_name || 'Unknown',
+          performedAt: typedEntry.performed_at || new Date().toISOString(),
+          notes: typedEntry.notes,
+        };
+      });
     } catch (error) {
       console.error('Error in getTicketAuditLog:', error);
       return [];

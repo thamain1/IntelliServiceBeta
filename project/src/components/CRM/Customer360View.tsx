@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   User,
   Phone,
@@ -17,6 +17,10 @@ import {
 import type { Customer360 } from '../../services/CRMService';
 import { CRMService as CRMServiceImpl } from '../../services/CRMService';
 import { NewInteractionModal } from './NewInteractionModal';
+import { Tables } from '../../lib/dbTypes';
+
+// Type for customer equipment from the Customer360 data
+type CustomerEquipment = Tables<'customer_equipment'>;
 
 interface Customer360ViewProps {
   customerId: string;
@@ -28,11 +32,7 @@ export function Customer360View({ customerId, onClose }: Customer360ViewProps) {
   const [data, setData] = useState<Customer360 | null>(null);
   const [showInteractionModal, setShowInteractionModal] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [customerId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const customer360 = await CRMServiceImpl.getCustomer360(customerId);
@@ -42,7 +42,11 @@ export function Customer360View({ customerId, onClose }: Customer360ViewProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getEventIcon = (type: string | null) => {
     switch (type ?? '') {
@@ -223,7 +227,7 @@ export function Customer360View({ customerId, onClose }: Customer360ViewProps) {
                     <div className="card p-4">
                       <h3 className="font-medium text-gray-900 dark:text-white mb-3">Equipment</h3>
                       <div className="space-y-2">
-                        {equipment.map((eq: any) => (
+                        {equipment.map((eq: CustomerEquipment) => (
                           <div key={eq.id} className="flex items-center gap-2 text-sm">
                             <Wrench className="w-4 h-4 text-gray-400" />
                             <div>

@@ -165,7 +165,7 @@ export function NewEstimateModal({
     }
   };
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
+  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
     setLineItems(lineItems.map(item => {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
@@ -253,8 +253,8 @@ export function NewEstimateModal({
       const totals = calculateTotals();
 
       // Create estimate
-      const { data: estimate, error: estimateError } = await supabase
-        .from('estimates' as any)
+      const { data: estimate, error: estimateError } = await (supabase
+        .from('estimates') as unknown as ReturnType<typeof supabase.from>)
         .insert({
           customer_id: formData.customer_id,
           site_location: formData.site_location || null,
@@ -272,15 +272,16 @@ export function NewEstimateModal({
           created_by: profile?.id,
         })
         .select()
-        .single() as any;
+        .single();
 
       if (estimateError) throw estimateError;
 
       // Create line items
+      const estimateData = estimate as unknown as { id: string; estimate_number: string; customer_id: string };
       const lineItemsToInsert = lineItems
         .filter(item => item.description && item.description.trim() !== '')
         .map((item, index) => ({
-          estimate_id: (estimate as any).id,
+          estimate_id: estimateData.id,
           line_order: index,
           item_type: item.item_type,
           description: item.description,
@@ -345,9 +346,9 @@ export function NewEstimateModal({
 
       // Pass estimate data to trigger Send modal
       onSuccess({
-        estimateId: (estimate as any).id,
-        estimateNumber: (estimate as any).estimate_number,
-        customerId: (estimate as any).customer_id,
+        estimateId: estimateData.id,
+        estimateNumber: estimateData.estimate_number,
+        customerId: estimateData.customer_id,
         customerEmail: customer?.email || null,
         customerPhone: customer?.phone || null,
       });

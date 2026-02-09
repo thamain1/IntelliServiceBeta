@@ -96,6 +96,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemType]);
 
   // Auto-open modal and pre-populate when linkedRequest is provided
@@ -123,6 +124,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
       });
       setShowAddModal(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedRequest, parts]);
 
   const loadData = async () => {
@@ -148,9 +150,9 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
       if (vendorsResult.error) throw vendorsResult.error;
       if (partsResult.error) throw partsResult.error;
 
-      setPurchaseOrders((posResult.data as any) || []);
-      setVendors((vendorsResult.data as any) || []);
-      setParts((partsResult.data as any) || []);
+      setPurchaseOrders((posResult.data as PurchaseOrder[]) || []);
+      setVendors((vendorsResult.data as Vendor[]) || []);
+      setParts((partsResult.data as Part[]) || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -172,7 +174,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
     ]);
   };
 
-  const updateLineItem = (id: string, field: keyof POLineItem, value: any) => {
+  const updateLineItem = (id: string, field: keyof POLineItem, value: string | number) => {
     setLineItems(
       lineItems.map((item) => {
         if (item.id !== id) return item;
@@ -304,7 +306,7 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
     try {
       const { error } = await supabase
         .from('purchase_orders')
-        .update({ status: newStatus as any })
+        .update({ status: newStatus })
         .eq('id', poId);
 
       if (error) throw error;

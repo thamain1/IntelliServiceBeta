@@ -27,7 +27,15 @@ export function PartsTransferView({ itemType = 'part' }: PartsTransferViewProps)
   const [locations, setLocations] = useState<StockLocation[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [inventory, setInventory] = useState<PartInventory[]>([]);
-  const [movements, setMovements] = useState<any[]>([]);
+  const [movements, setMovements] = useState<{
+    id: string;
+    movement_date: string;
+    quantity: number;
+    parts?: { name: string; part_number: string } | null;
+    from_location?: { name: string } | null;
+    to_location?: { name: string } | null;
+    moved_by_profile?: { full_name: string } | null;
+  }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,6 +50,7 @@ export function PartsTransferView({ itemType = 'part' }: PartsTransferViewProps)
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemType]);
 
   const loadData = async () => {
@@ -60,11 +69,11 @@ export function PartsTransferView({ itemType = 'part' }: PartsTransferViewProps)
           .select('*')
           .eq('item_type', itemType)
           .order('name'),
-        (supabase
-          .from('part_inventory') as any)
+        supabase
+          .from('part_inventory')
           .select('*, parts!inner(*), stock_locations(*)'),
-        (supabase
-          .from('inventory_movements') as any)
+        supabase
+          .from('inventory_movements')
           .select(`
             *,
             parts(name, part_number),
@@ -79,16 +88,16 @@ export function PartsTransferView({ itemType = 'part' }: PartsTransferViewProps)
 
       if (locationsRes.error) throw locationsRes.error;
       if (partsRes.error) throw partsRes.error;
-      if ((inventoryRes as any).error) throw (inventoryRes as any).error;
+      if (inventoryRes.error) throw inventoryRes.error;
       if (movementsRes.error) throw movementsRes.error;
 
       setLocations(locationsRes.data || []);
       setParts(partsRes.data || []);
       // Filter inventory data that was retrieved without filters
-      const filteredInventory = ((inventoryRes as any).data || []).filter((inv: any) =>
+      const filteredInventory = (inventoryRes.data || []).filter((inv) =>
         inv.parts?.item_type === itemType && inv.quantity > 0
       );
-      setInventory(filteredInventory);
+      setInventory(filteredInventory as unknown as PartInventory[]);
       setMovements(movementsRes.data || []);
     } catch (error) {
       console.error('Error loading transfer data:', error);

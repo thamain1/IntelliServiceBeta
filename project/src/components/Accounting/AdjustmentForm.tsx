@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, X, DollarSign, AlertCircle } from 'lucide-react';
 import { ReconciliationService, AdjustmentType } from '../../services/ReconciliationService';
 import { supabase } from '../../lib/supabase';
@@ -60,16 +60,7 @@ export function AdjustmentForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  useEffect(() => {
-    // Set default accounts based on adjustment type
-    setDefaultAccounts();
-  }, [adjustmentType, accounts, accountId]);
-
-  const loadAccounts = async () => {
+  const loadAccounts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('chart_of_accounts')
@@ -79,12 +70,12 @@ export function AdjustmentForm({
 
       if (error) throw error;
       setAccounts(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load accounts:', err);
     }
-  };
+  }, []);
 
-  const setDefaultAccounts = () => {
+  const setDefaultAccounts = useCallback(() => {
     if (accounts.length === 0) return;
 
     // Find common accounts
@@ -106,18 +97,28 @@ export function AdjustmentForm({
         setDebitAccountId(accountId);
         setCreditAccountId(interestIncome?.id || '');
         break;
-      case 'nsf':
+      case 'nsf': {
         // Debit AR (or expense), credit bank
         const arAccount = accounts.find((a) => a.account_name.toLowerCase().includes('receivable'));
         setDebitAccountId(arAccount?.id || '');
         setCreditAccountId(accountId);
         break;
+      }
       default:
         // Default: debit bank
         setDebitAccountId(accountId);
         setCreditAccountId('');
     }
-  };
+  }, [accounts, adjustmentType, accountId]);
+
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
+
+  useEffect(() => {
+    // Set default accounts based on adjustment type
+    setDefaultAccounts();
+  }, [setDefaultAccounts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,9 +160,9 @@ export function AdjustmentForm({
       });
 
       onAdjustmentCreated();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create adjustment:', err);
-      setError(err.message || 'Failed to create adjustment');
+      setError(err instanceof Error ? err.message : 'Failed to create adjustment');
     } finally {
       setLoading(false);
     }

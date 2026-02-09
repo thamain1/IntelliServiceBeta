@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { FileText, Plus, Search, Calendar, DollarSign, Users, AlertTriangle, RefreshCw, CheckCircle, Clock, BarChart2, Mail } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import type { Database } from '../../lib/database.types';
+import type { Tables } from '../../lib/dbTypes';
 import { ContractDetailModal } from './ContractDetailModal';
 import { NewContractModal } from './NewContractModal';
 import { ContractAutomationService, type ContractRenewalReminder, type SLAMetrics, type ContractPlan } from '../../services/ContractAutomationService';
 
-type ServiceContract = Database['public']['Tables']['service_contracts']['Row'] & {
+type ServiceContract = Tables<'service_contracts'> & {
   customers?: { name: string; email: string };
   customer_locations?: { location_name: string; address: string };
   contract_plans?: { name: string };
@@ -35,24 +35,16 @@ export function ServiceContractsView() {
     slaBreeches: 0,
   });
 
-  useEffect(() => {
-    loadContracts();
-    loadStats();
-    loadExpiringContracts();
-    loadSLAMetrics();
-    loadContractPlans();
-  }, [statusFilter]);
-
-  const loadContractPlans = async () => {
+  const loadContractPlans = useCallback(async () => {
     try {
       const plans = await ContractAutomationService.getContractPlans();
       setContractPlans(plans);
     } catch (error) {
       console.error('Error loading contract plans:', error);
     }
-  };
+  }, []);
 
-  const loadContracts = async () => {
+  const loadContracts = useCallback(async () => {
     try {
       let query = supabase
         .from('service_contracts')
@@ -76,9 +68,9 @@ export function ServiceContractsView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const { data: activeData, error: activeError } = await supabase
         .from('service_contracts')
@@ -107,18 +99,18 @@ export function ServiceContractsView() {
     } catch (error) {
       console.error('Error loading stats:', error);
     }
-  };
+  }, []);
 
-  const loadExpiringContracts = async () => {
+  const loadExpiringContracts = useCallback(async () => {
     try {
       const expiring = await ContractAutomationService.getExpiringContracts(60);
       setExpiringContracts(expiring);
     } catch (error) {
       console.error('Error loading expiring contracts:', error);
     }
-  };
+  }, []);
 
-  const loadSLAMetrics = async () => {
+  const loadSLAMetrics = useCallback(async () => {
     try {
       const metrics = await ContractAutomationService.getSLAMetrics();
       setSlaMetrics(metrics);
@@ -127,7 +119,15 @@ export function ServiceContractsView() {
     } catch (error) {
       console.error('Error loading SLA metrics:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadContracts();
+    loadStats();
+    loadExpiringContracts();
+    loadSLAMetrics();
+    loadContractPlans();
+  }, [statusFilter, loadContracts, loadStats, loadExpiringContracts, loadSLAMetrics, loadContractPlans]);
 
   const handleRenewContract = async (contractId: string, _daysUntilExpiry: number) => {
     setRenewingContractId(contractId);
@@ -153,9 +153,9 @@ export function ServiceContractsView() {
       } else {
         alert(`Failed to renew: ${result.error}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error renewing contract:', error);
-      alert(`Failed to renew contract: ${error.message}`);
+      alert(`Failed to renew contract: ${(error as Error).message}`);
     } finally {
       setRenewingContractId(null);
     }

@@ -56,6 +56,7 @@ export function WarrantyClaimModal({
         }));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProvider]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,8 +85,8 @@ export function WarrantyClaimModal({
 
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to save claim');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save claim');
     } finally {
       setSaving(false);
     }
@@ -100,8 +101,8 @@ export function WarrantyClaimModal({
       if (!result.success) throw new Error(result.error);
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit claim');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit claim');
     } finally {
       setSaving(false);
     }

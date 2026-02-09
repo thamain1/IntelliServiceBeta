@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ArrowLeft,
   Calendar,
@@ -16,12 +16,19 @@ import {
   Building2,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import type { Tables } from '../../lib/dbTypes';
 import { NewTicketModal } from '../Tickets/NewTicketModal';
 import { ProjectBillingSchedule } from './ProjectBillingSchedule';
 import { DepositReleasePanel } from './DepositReleasePanel';
 import { MasterProjectView } from './MasterProjectView';
 import { GanttChart } from './GanttChart';
 import { useAuth } from '../../contexts/AuthContext';
+
+type ProjectRow = Tables<'projects'> & {
+  customers?: { name: string };
+  profiles?: { full_name: string };
+  parent_project?: { project_number: string; name: string };
+};
 
 type ProjectDetailViewProps = {
   projectId: string;
@@ -86,15 +93,20 @@ type Issue = {
   profiles?: { full_name: string };
 };
 
+type TicketRow = Tables<'tickets'> & {
+  profiles?: { full_name: string };
+  customers?: { name: string };
+};
+
 export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps) {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'phases' | 'tasks' | 'budget' | 'gantt' | 'kanban' | 'changes' | 'issues' | 'workorders' | 'billing' | 'deposits'>('overview');
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<ProjectRow | null>(null);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [workOrders, setWorkOrders] = useState<any[]>([]);
+  const [workOrders, setWorkOrders] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPhaseModal, setShowPhaseModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -139,16 +151,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
     impact_schedule_days: 0,
   });
 
-  useEffect(() => {
-    loadProjectDetails();
-    loadPhases();
-    loadTasks();
-    loadChangeOrders();
-    loadIssues();
-    loadWorkOrders();
-  }, [projectId]);
-
-  const loadProjectDetails = async () => {
+  const _loadProjectDetails = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -166,9 +169,9 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
-  const loadPhases = async () => {
+  const loadPhases = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('project_phases')
@@ -177,13 +180,13 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
         .order('phase_order', { ascending: true });
 
       if (error) throw error;
-      setPhases((data as any) || []);
+      setPhases((data as unknown as Phase[]) || []);
     } catch (error) {
       console.error('Error loading phases:', error);
     }
-  };
+  }, [projectId]);
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('project_tasks')
@@ -192,13 +195,13 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
         .order('start_date', { ascending: true });
 
       if (error) throw error;
-      setTasks((data as any) || []);
+      setTasks((data as unknown as Task[]) || []);
     } catch (error) {
       console.error('Error loading tasks:', error);
     }
-  };
+  }, [projectId]);
 
-  const loadChangeOrders = async () => {
+  const loadChangeOrders = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('project_change_orders')
@@ -207,13 +210,13 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
         .order('requested_date', { ascending: false });
 
       if (error) throw error;
-      setChangeOrders((data as any) || []);
+      setChangeOrders((data as unknown as ChangeOrder[]) || []);
     } catch (error) {
       console.error('Error loading change orders:', error);
     }
-  };
+  }, [projectId]);
 
-  const loadIssues = async () => {
+  const loadIssues = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('project_issues')
@@ -222,16 +225,16 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
         .order('created_at', { ascending: false});
 
       if (error) throw error;
-      setIssues((data as any) || []);
+      setIssues((data as unknown as Issue[]) || []);
     } catch (error) {
       console.error('Error loading issues:', error);
     }
-  };
+  }, [projectId]);
 
-  const loadWorkOrders = async () => {
+  const loadWorkOrders = useCallback(async () => {
     try {
-      const { data, error } = await (supabase
-        .from('tickets') as any)
+      const { data, error } = await supabase
+        .from('tickets')
         .select(`
           *,
           profiles:assigned_to(full_name),
@@ -242,11 +245,11 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWorkOrders(data || []);
+      setWorkOrders((data as unknown as TicketRow[]) || []);
     } catch (error) {
       console.error('Error loading work orders:', error);
     }
-  };
+  }, [projectId]);
 
   const handleAddPhase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,7 +343,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
       return 'ISS-001';
     }
 
-    const lastNumber = parseInt((data[0] as any)?.issue_number?.split('-')[1]) || 0;
+    const lastNumber = parseInt((data[0] as unknown as { issue_number: string })?.issue_number?.split('-')[1]) || 0;
     return `ISS-${String(lastNumber + 1).padStart(3, '0')}`;
   };
 
@@ -540,7 +543,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
           {['overview', 'workorders', ...(isSiteJob ? ['billing', 'deposits'] : []), 'phases', 'tasks', 'budget', 'gantt', 'kanban', 'changes', 'issues'].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab as typeof activeTab)}
               className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                 activeTab === tab
                   ? 'border-blue-600 text-blue-600'
@@ -1168,7 +1171,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
                             try {
                               const { error } = await supabase
                                 .from('project_tasks')
-                                .update({ status: status as any })
+                                .update({ status: status as 'pending' | 'in_progress' | 'blocked' | 'completed' })
                                 .eq('id', draggedTaskId);
 
                               if (error) throw error;
@@ -1247,7 +1250,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
                                     try {
                                       const { error } = await supabase
                                         .from('project_tasks')
-                                        .update({ status: newStatus as any })
+                                        .update({ status: newStatus as 'pending' | 'in_progress' | 'blocked' | 'completed' })
                                         .eq('id', task.id);
 
                                       if (error) throw error;
@@ -1281,7 +1284,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
                       try {
                         const { error } = await supabase
                           .from('project_tasks')
-                          .update({ status: status as any })
+                          .update({ status: status as 'pending' | 'in_progress' | 'blocked' | 'completed' })
                           .eq('id', draggedTaskId);
 
                         if (error) throw error;
@@ -1681,7 +1684,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
                   </label>
                   <select
                     value={taskFormData.priority}
-                    onChange={(e) => setTaskFormData({ ...taskFormData, priority: e.target.value as any })}
+                    onChange={(e) => setTaskFormData({ ...taskFormData, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent' })}
                     className="input"
                   >
                     <option value="low">Low</option>
@@ -1812,7 +1815,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
                   <select
                     required
                     value={issueFormData.type}
-                    onChange={(e) => setIssueFormData({ ...issueFormData, type: e.target.value as any })}
+                    onChange={(e) => setIssueFormData({ ...issueFormData, type: e.target.value as 'issue' | 'risk' })}
                     className="input"
                   >
                     <option value="issue">Issue</option>
@@ -1826,7 +1829,7 @@ export function ProjectDetailView({ projectId, onBack }: ProjectDetailViewProps)
                   <select
                     required
                     value={issueFormData.severity}
-                    onChange={(e) => setIssueFormData({ ...issueFormData, severity: e.target.value as any })}
+                    onChange={(e) => setIssueFormData({ ...issueFormData, severity: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
                     className="input"
                   >
                     <option value="low">Low</option>

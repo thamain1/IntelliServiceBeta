@@ -1,4 +1,16 @@
 import { supabase } from '../lib/supabase';
+import { Tables } from '../lib/dbTypes';
+
+// Composite type for AHS audit log with joined profile data
+type AHSAuditLogWithPerformer = Tables<'ahs_audit_log'> & {
+  performer: { full_name: string | null } | null;
+};
+
+// Type for the JSON values stored in old_value/new_value columns
+interface AHSSettingValue {
+  key: string;
+  value: string | null;
+}
 
 export interface AHSDefaults {
   diagnosisFee: number;
@@ -135,14 +147,18 @@ export class AHSSettingsService {
         return [];
       }
 
-      return (data || []).map((entry) => ({
-        id: entry.id,
-        settingKey: (entry.new_value as any)?.key || '',
-        oldValue: (entry.old_value as any)?.value || null,
-        newValue: (entry.new_value as any)?.value || '',
-        changedBy: (entry.performer as any)?.full_name || 'Unknown',
-        changedAt: entry.performed_at || new Date().toISOString(),
-      }));
+      return ((data || []) as unknown as AHSAuditLogWithPerformer[]).map((entry) => {
+        const newValue = entry.new_value as unknown as AHSSettingValue | null;
+        const oldValue = entry.old_value as unknown as AHSSettingValue | null;
+        return {
+          id: entry.id,
+          settingKey: newValue?.key || '',
+          oldValue: oldValue?.value || null,
+          newValue: newValue?.value || '',
+          changedBy: entry.performer?.full_name || 'Unknown',
+          changedAt: entry.performed_at || new Date().toISOString(),
+        };
+      });
     } catch (error) {
       console.error('Error in getAHSSettingsHistory:', error);
       return [];

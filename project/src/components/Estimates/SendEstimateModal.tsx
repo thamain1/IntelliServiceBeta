@@ -66,6 +66,7 @@ export function SendEstimateModal({
       loadContacts();
       loadDeliveryHistory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, estimateId]);
 
   const loadContacts = async () => {
@@ -78,7 +79,7 @@ export function SendEstimateModal({
         .order('is_primary', { ascending: false });
 
       if (error) throw error;
-      setContacts((data as unknown as any[]) || []);
+      setContacts((data as unknown as CustomerContact[]) || []);
 
       if (data && data.length > 0 && data[0].is_primary) {
         setSelectedContactId(data[0].id);

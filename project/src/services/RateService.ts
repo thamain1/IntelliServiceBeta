@@ -39,6 +39,13 @@ export interface LaborRateSnapshot {
   overriddenAt?: string;
 }
 
+// Type for ticket data from time_log query join
+interface TicketRateInfo {
+  customer_id: string;
+  location_id?: string | null;
+  equipment_id?: string | null;
+}
+
 // RPC response type for fn_resolve_labor_rate
 interface RateRpcResponse {
   error?: boolean;
@@ -270,7 +277,7 @@ export class RateService {
         return { isValid: false, currentRate: 0, snapshotRate: 0 };
       }
 
-      const ticket = timeLog.ticket as any;
+      const ticket = timeLog.ticket as unknown as TicketRateInfo | null;
       if (!ticket) {
         return {
           isValid: false,

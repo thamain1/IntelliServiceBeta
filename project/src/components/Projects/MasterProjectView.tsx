@@ -59,6 +59,7 @@ export function MasterProjectView({ projectId, onClose }: MasterProjectViewProps
 
   useEffect(() => {
     loadMasterProjectData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadMasterProjectData = async () => {
@@ -70,7 +71,7 @@ export function MasterProjectView({ projectId, onClose }: MasterProjectViewProps
         .single();
 
       if (masterError) throw masterError;
-      setMasterProject((masterData as any));
+      setMasterProject(masterData as unknown as MasterProject);
 
       const { data: sitesData, error: sitesError } = await supabase
         .from('v_site_jobs_summary')
@@ -79,7 +80,7 @@ export function MasterProjectView({ projectId, onClose }: MasterProjectViewProps
         .order('sequence_number', { ascending: true, nullsFirst: false });
 
       if (sitesError) throw sitesError;
-      setSiteJobs((sitesData as any) || []);
+      setSiteJobs((sitesData as unknown as SiteJob[]) || []);
     } catch (error) {
       console.error('Error loading master project:', error);
     } finally {
@@ -101,7 +102,7 @@ export function MasterProjectView({ projectId, onClose }: MasterProjectViewProps
   };
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, { className: string; icon: any }> = {
+    const badges: Record<string, { className: string; icon: React.ElementType }> = {
       completed: { className: 'badge badge-green', icon: CheckCircle },
       in_progress: { className: 'badge badge-blue', icon: Clock },
       planning: { className: 'badge badge-yellow', icon: AlertCircle },

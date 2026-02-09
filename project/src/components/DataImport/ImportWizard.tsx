@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, CheckCircle, AlertCircle, Upload, FileText, Database } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Upload, FileText, Database, LucideIcon } from 'lucide-react';
 import type { ImportEntityType, ColumnMapping, ImportBatch } from '../../services/DataImportService';
 import { StepSelectType } from './StepSelectType';
 import { StepUploadFile } from './StepUploadFile';
@@ -13,17 +13,39 @@ interface ImportWizardProps {
 
 export type WizardStep = 'select-type' | 'upload' | 'mapping' | 'validation' | 'import';
 
+// Parsed row from CSV/TSV file with dynamic columns
+type ParsedRow = Record<string, unknown>;
+
+// Step completion data types for each wizard step
+interface SelectTypeStepData {
+  entityType: ImportEntityType;
+}
+
+interface UploadStepData {
+  file: File;
+  content: string;
+  parsedRows: ParsedRow[];
+}
+
+interface MappingStepData {
+  mapping: ColumnMapping;
+  batch: ImportBatch;
+  stagingRowIds: string[];
+}
+
+type StepCompletionData = SelectTypeStepData | UploadStepData | MappingStepData | null;
+
 export function ImportWizard({ onClose }: ImportWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('select-type');
   const [entityType, setEntityType] = useState<ImportEntityType>('customers');
   const [file, setFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [_columnMapping, setColumnMapping] = useState<ColumnMapping>({});
   const [importBatch, setImportBatch] = useState<ImportBatch | null>(null);
   const [stagingRowIds, setStagingRowIds] = useState<string[]>([]);
 
-  const steps: { id: WizardStep; label: string; icon: any }[] = [
+  const steps: { id: WizardStep; label: string; icon: LucideIcon }[] = [
     { id: 'select-type', label: 'Select Type', icon: Database },
     { id: 'upload', label: 'Upload File', icon: Upload },
     { id: 'mapping', label: 'Map Columns', icon: FileText },
@@ -47,16 +69,16 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
     }
   };
 
-  const handleStepComplete = (data: any) => {
-    if (currentStep === 'select-type') {
+  const handleStepComplete = (data: StepCompletionData) => {
+    if (currentStep === 'select-type' && data && 'entityType' in data) {
       setEntityType(data.entityType);
       handleNext();
-    } else if (currentStep === 'upload') {
+    } else if (currentStep === 'upload' && data && 'file' in data) {
       setFile(data.file);
       setFileContent(data.content);
       setParsedRows(data.parsedRows);
       handleNext();
-    } else if (currentStep === 'mapping') {
+    } else if (currentStep === 'mapping' && data && 'mapping' in data) {
       setColumnMapping(data.mapping);
       setImportBatch(data.batch);
       setStagingRowIds(data.stagingRowIds);

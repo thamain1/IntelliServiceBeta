@@ -25,6 +25,8 @@ type Part = Database['public']['Tables']['parts']['Row'] & {
   is_returnable?: boolean;
   tool_category?: string;
   asset_tag?: string;
+  requires_registration?: boolean;
+  registration_url?: string | null;
 };
 
 type PartWithInventory = Part & {
@@ -99,6 +101,7 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
     loadParts();
     loadVendors();
     loadReorderAlertCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemType]);
 
   const loadReorderAlertCount = async () => {
@@ -143,7 +146,7 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
         .order('name', { ascending: true });
 
       if (error) throw error;
-      setParts((data as any) || []);
+      setParts((data as unknown as PartWithInventory[]) || []);
     } catch (error) {
       console.error(`Error loading ${itemLabelPlural.toLowerCase()}:`, error);
     } finally {
@@ -169,12 +172,12 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
       vendor_part_number: part.vendor_part_number || '',
       reorder_point: part.reorder_point || 0,
       reorder_quantity: part.reorder_quantity || 0,
-      item_type: (part.item_type || itemType) as any,
+      item_type: (part.item_type || itemType) as ItemType,
       is_returnable: part.is_returnable || false,
       tool_category: part.tool_category || '',
       asset_tag: part.asset_tag || '',
-      requires_registration: (part as any).requires_registration || false,
-      registration_url: (part as any).registration_url || '',
+      requires_registration: part.requires_registration || false,
+      registration_url: part.registration_url || '',
     });
 
     // Load existing vendor mapping
@@ -463,7 +466,7 @@ export function PartsView({ itemType = 'part' }: PartsViewProps) {
             className="input md:w-64"
           >
             <option value="all">All Categories</option>
-            {categories.map((cat: any) => (
+            {categories.map((cat: string) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>

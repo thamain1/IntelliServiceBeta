@@ -39,6 +39,7 @@ export function ReorderAlertsView() {
     loadLocations();
     loadVendors();
     loadAlerts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLocation, selectedVendor, filterType]);
 
   const loadLocations = async () => {
@@ -75,7 +76,7 @@ export function ReorderAlertsView() {
     try {
       setLoading(true);
 
-      const params: any = {
+      const params: { locationId?: string; vendorId?: string; criticalOnly?: boolean; belowRopOnly?: boolean; stockoutsOnly?: boolean } = {
         locationId: selectedLocation !== 'all' ? selectedLocation : undefined,
         vendorId: selectedVendor !== 'all' ? selectedVendor : undefined,
       };
@@ -119,9 +120,9 @@ export function ReorderAlertsView() {
 
       // Refresh alerts
       loadAlerts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating PO:', error);
-      window.alert(error.message || 'Failed to create PO');
+      window.alert(error instanceof Error ? error.message : 'Failed to create PO');
     } finally {
       setCreatingPO(null);
     }
@@ -143,8 +144,8 @@ export function ReorderAlertsView() {
       setGeneratingAll(true);
 
       const { data, error } = await supabase.rpc('fn_generate_reorder_pos', {
-        p_location_id: selectedLocation !== 'all' ? selectedLocation : (undefined as any),
-        p_vendor_id: selectedVendor !== 'all' ? selectedVendor : (undefined as any),
+        p_location_id: selectedLocation !== 'all' ? selectedLocation : null,
+        p_vendor_id: selectedVendor !== 'all' ? selectedVendor : null,
       });
 
       if (error) throw error;
@@ -164,9 +165,9 @@ export function ReorderAlertsView() {
 
       // Refresh alerts
       loadAlerts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error generating POs:', error);
-      alert(error.message || 'Failed to generate POs');
+      alert(error instanceof Error ? error.message : 'Failed to generate POs');
     } finally {
       setGeneratingAll(false);
     }

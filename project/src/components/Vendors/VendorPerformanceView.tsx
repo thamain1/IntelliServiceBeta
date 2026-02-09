@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import type { Tables } from '../../lib/dbTypes';
 
 interface PerformanceMetric {
   metric: string;
@@ -19,10 +20,11 @@ interface VendorPerformanceViewProps {
 export function VendorPerformanceView({ vendorId }: VendorPerformanceViewProps) {
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<Tables<'vendors'>[]>([]);
 
   useEffect(() => {
     loadPerformanceData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
   const loadPerformanceData = async () => {
@@ -52,7 +54,7 @@ export function VendorPerformanceView({ vendorId }: VendorPerformanceViewProps) 
     const performanceMetrics: PerformanceMetric[] = [];
 
     if (slas && slas.length > 0) {
-      slas.forEach((sla: any) => {
+      slas.forEach((sla: { metric: string; target_value: number; target_unit: string }) => {
         performanceMetrics.push({
           metric: sla.metric,
           metricLabel: formatMetricLabel(sla.metric),

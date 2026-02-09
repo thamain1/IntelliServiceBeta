@@ -12,15 +12,23 @@ import {
 } from 'lucide-react';
 import { CRMService, CustomerInteraction } from '../../services/CRMService';
 import { supabase } from '../../lib/supabase';
+import { Tables } from '../../lib/dbTypes';
+
+// Extended type for interactions with joined customer and creator data
+type InteractionWithRelations = Tables<'customer_interactions'> & {
+  customer: { id: string; name: string; phone: string | null; email: string | null } | null;
+  creator: { full_name: string | null } | null;
+};
 
 export function InteractionsView() {
   const [loading, setLoading] = useState(true);
   const [followUps, setFollowUps] = useState<CustomerInteraction[]>([]);
-  const [recentInteractions, setRecentInteractions] = useState<any[]>([]);
+  const [recentInteractions, setRecentInteractions] = useState<InteractionWithRelations[]>([]);
   const [activeTab, setActiveTab] = useState<'follow-ups' | 'recent'>('follow-ups');
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
@@ -52,7 +60,7 @@ export function InteractionsView() {
       .limit(50);
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as unknown as InteractionWithRelations[];
   };
 
   const getInteractionIcon = (type: string | null) => {

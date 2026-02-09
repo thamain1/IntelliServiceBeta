@@ -8,6 +8,7 @@ import {
   MapPin,
   FileText,
   AlertCircle,
+  LucideIcon,
 } from 'lucide-react';
 import { CRMService, InteractionType, CreateInteractionInput } from '../../services/CRMService';
 
@@ -43,7 +44,7 @@ export function NewInteractionModal({
     related_estimate_id: relatedEstimateId,
   });
 
-  const interactionTypes: { value: InteractionType; label: string; icon: any }[] = [
+  const interactionTypes: { value: InteractionType; label: string; icon: LucideIcon }[] = [
     { value: 'call', label: 'Phone Call', icon: Phone },
     { value: 'email', label: 'Email', icon: Mail },
     { value: 'sms', label: 'SMS/Text', icon: MessageSquare },
@@ -76,9 +77,9 @@ export function NewInteractionModal({
     try {
       await CRMService.createInteraction(formData);
       onSaved();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create interaction:', err);
-      setError(err.message || 'Failed to save interaction');
+      setError(err instanceof Error ? err.message : 'Failed to save interaction');
     } finally {
       setLoading(false);
     }

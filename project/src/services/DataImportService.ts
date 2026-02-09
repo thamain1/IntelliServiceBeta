@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { Tables, TablesInsert, TablesUpdate } from '../lib/dbTypes';
 
 export type ImportEntityType = 'customers' | 'ar' | 'vendors' | 'items' | 'history';
 export type ImportBatchStatus = 'pending' | 'validating' | 'validated' | 'importing' | 'completed' | 'failed' | 'rolled_back';
@@ -68,7 +69,7 @@ export interface BatchLogEvent {
   import_batch_id: string;
   log_level: 'info' | 'warning' | 'error';
   message: string;
-  details: any;
+  details: Record<string, unknown>;
   created_at: string;
 }
 
@@ -85,7 +86,7 @@ export interface CustomerStagingRow {
   id?: string;
   import_batch_id: string;
   row_number: number;
-  raw_row_json: any;
+  raw_row_json: Record<string, unknown>;
   external_customer_id?: string;
   name?: string;
   email?: string;
@@ -105,7 +106,7 @@ export interface ARStagingRow {
   id?: string;
   import_batch_id: string;
   row_number: number;
-  raw_row_json: any;
+  raw_row_json: Record<string, unknown>;
   external_customer_id?: string;
   external_invoice_number?: string;
   invoice_amount?: number;
@@ -132,23 +133,75 @@ export interface ImportStats {
   warnings: number;
 }
 
+/** Vendor staging row for validation */
+export interface VendorStagingRow {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
+/** Item staging row for validation */
+export interface ItemStagingRow {
+  name?: string;
+  unit_cost?: string | number;
+  unit_price?: string | number;
+  quantity_on_hand?: string | number;
+}
+
+/** History staging row for validation */
+export interface HistoryStagingRow {
+  record_type?: string;
+  external_customer_id?: string;
+  document_number?: string;
+  document_date?: string;
+  amount?: string | number;
+}
+
+/** Raw import row data */
+export interface RawImportRow {
+  [key: string]: string | number | undefined;
+}
+
+/** Rollback log entry */
+export interface RollbackLogEntry {
+  id: string;
+  import_batch_id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  reason?: string;
+  created_at: string;
+}
+
+/** Customer with import info for rollback */
+interface CustomerWithImportInfo {
+  id: string;
+  name: string;
+}
+
+/** Invoice with import info for rollback */
+interface InvoiceWithImportInfo {
+  id: string;
+  invoice_number: string;
+}
+
 export class DataImportService {
   /**
    * Parse CSV/TSV file content with support for various encodings
    */
-  static parseCSV(content: string, delimiter: string = ','): any[] {
+  static parseCSV(content: string, delimiter: string = ','): Record<string, unknown>[] {
     const lines = content.trim().split('\n');
     if (lines.length === 0) return [];
 
     const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
-    const rows: any[] = [];
+    const rows: Record<string, unknown>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
 
       const values = this.parseCSVLine(line, delimiter);
-      const row: any = {};
+      const row: Record<string, unknown> = {};
 
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -258,7 +311,7 @@ export class DataImportService {
     if (!userData.user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
-      .from('import_batches' as any)
+      .from('import_batches')
       .insert([{
         entity_type: entityType,
         file_name: fileName,
@@ -266,7 +319,7 @@ export class DataImportService {
         file_encoding: encoding,
         created_by: userData.user.id,
         status: 'pending',
-      }] as any)
+      }] as unknown as TablesInsert<'import_batches'>[])
       .select()
       .single();
 
@@ -283,7 +336,7 @@ export class DataImportService {
   ): Promise<void> {
     const { error } = await supabase
       .from('import_batches')
-      .update(updates as any)
+      .update(updates as unknown as TablesUpdate<'import_batches'>)
       .eq('id', batchId);
 
     if (error) throw error;
@@ -296,14 +349,14 @@ export class DataImportService {
     batchId: string,
     level: 'info' | 'warning' | 'error',
     message: string,
-    details: any = {}
+    details: Record<string, unknown> = {}
   ): Promise<void> {
-    await supabase.from('import_logs').insert([{
+    await supabase.from('import_logs').insert({
       import_batch_id: batchId,
       log_level: level,
       message,
-      details,
-    }]);
+      details: details as unknown as TablesInsert<'import_logs'>['details'],
+    });
   }
 
   /**
@@ -425,7 +478,7 @@ export class DataImportService {
   /**
    * Validate vendor staging row
    */
-  static validateVendorRow(row: any): ValidationError[] {
+  static validateVendorRow(row: VendorStagingRow): ValidationError[] {
     const errors: ValidationError[] = [];
 
     // Required: name
@@ -455,7 +508,7 @@ export class DataImportService {
   /**
    * Validate item staging row
    */
-  static validateItemRow(row: any): ValidationError[] {
+  static validateItemRow(row: ItemStagingRow): ValidationError[] {
     const errors: ValidationError[] = [];
 
     // Required: name
@@ -465,7 +518,7 @@ export class DataImportService {
 
     // Validate unit cost if provided
     if (row.unit_cost !== undefined && row.unit_cost !== null && row.unit_cost !== '') {
-      const cost = parseFloat(row.unit_cost);
+      const cost = parseFloat(String(row.unit_cost));
       if (isNaN(cost)) {
         errors.push({ field: 'unit_cost', message: 'Invalid unit cost format' });
       } else if (cost < 0) {
@@ -475,7 +528,7 @@ export class DataImportService {
 
     // Validate unit price if provided
     if (row.unit_price !== undefined && row.unit_price !== null && row.unit_price !== '') {
-      const price = parseFloat(row.unit_price);
+      const price = parseFloat(String(row.unit_price));
       if (isNaN(price)) {
         errors.push({ field: 'unit_price', message: 'Invalid unit price format' });
       } else if (price < 0) {
@@ -485,7 +538,7 @@ export class DataImportService {
 
     // Validate quantity if provided
     if (row.quantity_on_hand !== undefined && row.quantity_on_hand !== null && row.quantity_on_hand !== '') {
-      const qty = parseInt(row.quantity_on_hand);
+      const qty = parseInt(String(row.quantity_on_hand));
       if (isNaN(qty)) {
         errors.push({ field: 'quantity_on_hand', message: 'Invalid quantity format' });
       } else if (qty < 0) {
@@ -499,7 +552,7 @@ export class DataImportService {
   /**
    * Validate history staging row
    */
-  static validateHistoryRow(row: any): ValidationError[] {
+  static validateHistoryRow(row: HistoryStagingRow): ValidationError[] {
     const errors: ValidationError[] = [];
 
     // Required: record_type
@@ -530,7 +583,7 @@ export class DataImportService {
 
     // Validate amount if provided
     if (row.amount !== undefined && row.amount !== null && row.amount !== '') {
-      const amount = parseFloat(row.amount);
+      const amount = parseFloat(String(row.amount));
       if (isNaN(amount)) {
         errors.push({ field: 'amount', message: 'Invalid amount format' });
       }
@@ -542,7 +595,7 @@ export class DataImportService {
   /**
    * Check if row should be skipped (e.g., total rows, empty rows)
    */
-  static shouldSkipRow(rawRow: any, entityType: ImportEntityType): boolean {
+  static shouldSkipRow(rawRow: RawImportRow, entityType: ImportEntityType): boolean {
     // Skip completely empty rows
     const hasData = Object.values(rawRow).some(v => v && v.toString().trim() !== '');
     if (!hasData) return true;
@@ -577,7 +630,7 @@ export class DataImportService {
     const { data, error } = await query;
     if (error) throw error;
 
-    return data as ImportBatch[];
+    return data as unknown as ImportBatch[];
   }
 
   /**
@@ -591,33 +644,34 @@ export class DataImportService {
       .single();
 
     if (error) throw error;
-    return data as ImportBatch;
+    return data as unknown as ImportBatch;
   }
 
   /**
    * Get staging rows for a batch
    */
-  static async getStagingRows(batchId: string, entityType: ImportEntityType): Promise<any[]> {
-    const tableNameMap: Record<string, string> = {
-      customers: 'import_customers_staging',
-      ar: 'import_ar_staging',
-      vendors: 'import_vendors_staging',
-      items: 'import_items_staging',
-      history: 'import_history_staging',
-    };
-    const tableName = tableNameMap[entityType];
-    if (!tableName) {
-      throw new Error(`Unknown entity type: ${entityType}`);
+  static async getStagingRows(batchId: string, entityType: ImportEntityType): Promise<Tables<'import_customers_staging'>[] | Tables<'import_ar_staging'>[]> {
+    if (entityType === 'customers') {
+      const { data, error } = await supabase
+        .from('import_customers_staging')
+        .select('*')
+        .eq('import_batch_id', batchId)
+        .order('row_number', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } else if (entityType === 'ar') {
+      const { data, error } = await supabase
+        .from('import_ar_staging')
+        .select('*')
+        .eq('import_batch_id', batchId)
+        .order('row_number', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
     }
 
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .select('*')
-      .eq('import_batch_id', batchId)
-      .order('row_number', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
+    throw new Error(`Unknown entity type: ${entityType}`);
   }
 
 
@@ -653,57 +707,63 @@ export class DataImportService {
   /**
    * Get preview of valid staging rows for a batch
    */
-  static async getBatchPreviewRows(batchId: string, entityType: ImportEntityType, limit: number = 50): Promise<any[]> {
-    const tableNameMap: Record<string, string> = {
-      customers: 'import_customers_staging',
-      ar: 'import_ar_staging',
-      vendors: 'import_vendors_staging',
-      items: 'import_items_staging',
-      history: 'import_history_staging',
-    };
-    const tableName = tableNameMap[entityType];
-    if (!tableName) {
-      throw new Error(`Unknown entity type: ${entityType}`);
+  static async getBatchPreviewRows(batchId: string, entityType: ImportEntityType, limit: number = 50): Promise<Tables<'import_customers_staging'>[] | Tables<'import_ar_staging'>[]> {
+    if (entityType === 'customers') {
+      const { data, error } = await supabase
+        .from('import_customers_staging')
+        .select('*')
+        .eq('import_batch_id', batchId)
+        .eq('validation_status', 'valid')
+        .order('row_number', { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } else if (entityType === 'ar') {
+      const { data, error } = await supabase
+        .from('import_ar_staging')
+        .select('*')
+        .eq('import_batch_id', batchId)
+        .eq('validation_status', 'valid')
+        .order('row_number', { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
     }
 
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .select('*')
-      .eq('import_batch_id', batchId)
-      .eq('validation_status', 'valid')
-      .order('row_number', { ascending: true })
-      .limit(limit);
-
-    if (error) throw error;
-    return data || [];
+    throw new Error(`Unknown entity type: ${entityType}`);
   }
 
   /**
    * Get error rows for a batch
    */
-  static async getBatchErrorRows(batchId: string, entityType: ImportEntityType, limit: number = 100): Promise<any[]> {
-    const tableNameMap: Record<string, string> = {
-      customers: 'import_customers_staging',
-      ar: 'import_ar_staging',
-      vendors: 'import_vendors_staging',
-      items: 'import_items_staging',
-      history: 'import_history_staging',
-    };
-    const tableName = tableNameMap[entityType];
-    if (!tableName) {
-      throw new Error(`Unknown entity type: ${entityType}`);
+  static async getBatchErrorRows(batchId: string, entityType: ImportEntityType, limit: number = 100): Promise<Tables<'import_customers_staging'>[] | Tables<'import_ar_staging'>[]> {
+    if (entityType === 'customers') {
+      const { data, error } = await supabase
+        .from('import_customers_staging')
+        .select('*')
+        .eq('import_batch_id', batchId)
+        .eq('validation_status', 'error')
+        .order('row_number', { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } else if (entityType === 'ar') {
+      const { data, error } = await supabase
+        .from('import_ar_staging')
+        .select('*')
+        .eq('import_batch_id', batchId)
+        .eq('validation_status', 'error')
+        .order('row_number', { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
     }
 
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .select('*')
-      .eq('import_batch_id', batchId)
-      .eq('validation_status', 'error')
-      .order('row_number', { ascending: true })
-      .limit(limit);
-
-    if (error) throw error;
-    return data || [];
+    throw new Error(`Unknown entity type: ${entityType}`);
   }
 
   /**
@@ -733,7 +793,7 @@ export class DataImportService {
       last_error_message?: string;
     }
   ): Promise<void> {
-    const updateData: any = { ...updates };
+    const updateData: Partial<ImportBatch> = { ...updates };
 
     if (updates.last_error_message) {
       updateData.last_error_at = new Date().toISOString();
@@ -760,7 +820,7 @@ export class DataImportService {
       phase: 'cancelled',
       status: 'failed',
       completed_at: new Date().toISOString(),
-    } as any);
+    } as Partial<ImportBatch>);
 
     await this.logImportEvent(batchId, 'warning', 'Import cancelled by user');
   }
@@ -805,7 +865,7 @@ export class DataImportService {
       // Set rollback flag
       await this.updateImportBatch(batchId, {
         is_rollback_requested: true,
-      } as any);
+      } as Partial<ImportBatch>);
 
       await this.logImportEvent(batchId, 'info', 'Starting rollback process');
 
@@ -827,7 +887,7 @@ export class DataImportService {
         phase: 'rolled_back',
         status: 'rolled_back',
         rolled_back_at: new Date().toISOString(),
-      } as any);
+      } as Partial<ImportBatch>);
 
       await this.logImportEvent(
         batchId,
@@ -836,11 +896,12 @@ export class DataImportService {
       );
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       result.success = false;
-      result.error = error.message;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      result.error = errorMessage;
 
-      await this.logImportEvent(batchId, 'error', 'Rollback failed: ' + error.message);
+      await this.logImportEvent(batchId, 'error', 'Rollback failed: ' + errorMessage);
 
       throw error;
     }
@@ -865,7 +926,7 @@ export class DataImportService {
 
     if (error) throw error;
 
-    for (const customer of customers || []) {
+    for (const customer of (customers || []) as CustomerWithImportInfo[]) {
       // Check if customer can be safely deleted
       const { data: canDelete } = await supabase.rpc('can_rollback_customer', {
         customer_id_param: customer.id,
@@ -937,7 +998,7 @@ export class DataImportService {
 
     if (error) throw error;
 
-    for (const invoice of invoices || []) {
+    for (const invoice of (invoices || []) as InvoiceWithImportInfo[]) {
       // Check if invoice can be safely deleted
       const { data: canDelete } = await supabase.rpc('can_rollback_invoice', {
         invoice_id_param: invoice.id,
@@ -1021,7 +1082,9 @@ export class DataImportService {
         .select('id', { count: 'exact', head: true })
         .eq('import_batch_id', batchId);
 
-      if ((customerCount as any)?.count > 0 || (invoiceCount as any)?.count > 0) {
+      const customerCountResult = customerCount as unknown as { count: number } | null;
+      const invoiceCountResult = invoiceCount as unknown as { count: number } | null;
+      if ((customerCountResult?.count ?? 0) > 0 || (invoiceCountResult?.count ?? 0) > 0) {
         throw new Error('Cannot delete batch: live records still exist. Complete rollback first.');
       }
     }
@@ -1062,7 +1125,7 @@ export class DataImportService {
   /**
    * Get rollback logs for a batch
    */
-  static async getRollbackLogs(batchId: string): Promise<any[]> {
+  static async getRollbackLogs(batchId: string): Promise<RollbackLogEntry[]> {
     const { data, error } = await supabase
       .from('import_rollback_logs')
       .select('*')
@@ -1070,6 +1133,6 @@ export class DataImportService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as unknown as RollbackLogEntry[];
   }
 }

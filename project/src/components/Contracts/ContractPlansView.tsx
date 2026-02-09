@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Award, Plus, Search, Edit2, Archive, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import type { Database } from '../../lib/database.types';
+import type { Tables, Enums } from '../../lib/dbTypes';
 
-type ContractPlan = Database['public']['Tables']['contract_plans']['Row'];
+type ContractPlan = Tables<'contract_plans'>;
+type ContractPriorityLevel = Enums<'priority_level'>;
 
 export function ContractPlansView() {
   const [plans, setPlans] = useState<ContractPlan[]>([]);
@@ -15,6 +16,7 @@ export function ContractPlansView() {
 
   useEffect(() => {
     loadPlans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showInactive]);
 
   const loadPlans = async () => {
@@ -47,9 +49,9 @@ export function ContractPlansView() {
 
       alert(`Plan ${plan.is_active ? 'deactivated' : 'activated'} successfully!`);
       loadPlans();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error toggling plan status:', error);
-      alert(`Failed to update plan: ${error.message}`);
+      alert(`Failed to update plan: ${(error as Error).message}`);
     }
   };
 
@@ -272,7 +274,7 @@ function EditPlanModal({ plan, onClose }: { plan: ContractPlan; onClose: () => v
           default_base_fee: parseFloat(formData.default_base_fee),
           includes_emergency_service: formData.includes_emergency_service,
           includes_after_hours_rate_reduction: formData.includes_after_hours_rate_reduction,
-          priority_level: formData.priority_level as any,
+          priority_level: formData.priority_level as unknown as ContractPriorityLevel,
           response_time_sla_hours: formData.response_time_sla_hours ? parseFloat(formData.response_time_sla_hours) : null,
         })
         .eq('id', plan.id);
@@ -281,9 +283,9 @@ function EditPlanModal({ plan, onClose }: { plan: ContractPlan; onClose: () => v
 
       alert('Plan updated successfully!');
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating plan:', error);
-      alert(`Failed to update plan: ${error.message}`);
+      alert(`Failed to update plan: ${(error as Error).message}`);
     } finally {
       setSaving(false);
     }
@@ -396,7 +398,7 @@ function EditPlanModal({ plan, onClose }: { plan: ContractPlan; onClose: () => v
               </label>
               <select
                 value={formData.priority_level || ''}
-                onChange={(e) => setFormData({ ...formData, priority_level: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, priority_level: e.target.value as unknown as ContractPriorityLevel })}
                 className="input"
               >
                 <option value="normal">Normal</option>
@@ -484,7 +486,7 @@ function NewPlanModal({ onClose }: { onClose: () => void }) {
     default_base_fee: '0',
     includes_emergency_service: false,
     includes_after_hours_rate_reduction: false,
-    priority_level: 'normal' as const,
+    priority_level: 'normal' as ContractPriorityLevel,
     response_time_sla_hours: '',
   });
 
@@ -514,9 +516,9 @@ function NewPlanModal({ onClose }: { onClose: () => void }) {
 
       alert('Plan created successfully!');
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating plan:', error);
-      alert(`Failed to create plan: ${error.message}`);
+      alert(`Failed to create plan: ${(error as Error).message}`);
     } finally {
       setSaving(false);
     }
@@ -629,7 +631,7 @@ function NewPlanModal({ onClose }: { onClose: () => void }) {
               </label>
               <select
                 value={formData.priority_level || ''}
-                onChange={(e) => setFormData({ ...formData, priority_level: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, priority_level: e.target.value as unknown as ContractPriorityLevel })}
                 className="input"
               >
                 <option value="normal">Normal</option>

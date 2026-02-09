@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { Tables, Views } from '../lib/dbTypes';
 
 // Types - allow nulls to match DB schema
 export interface DealPipeline {
@@ -98,7 +99,7 @@ export interface SalesPipelineItem {
 }
 
 export interface Customer360 {
-  customer: any;
+  customer: Tables<'customers'>;
   stats: {
     total_tickets: number;
     open_tickets: number;
@@ -110,10 +111,15 @@ export interface Customer360 {
     last_service_date?: string | null;
   };
   timeline: CustomerTimelineEvent[];
-  equipment: any[];
+  equipment: Tables<'equipment'>[];
 }
 
 export type InteractionType = 'call' | 'email' | 'sms' | 'meeting' | 'note' | 'site_visit';
+
+/** Customer with equipment for prospect queries */
+export type CustomerWithEquipment = Tables<'customers'> & {
+  equipment: Pick<Tables<'equipment'>, 'id' | 'manufacturer' | 'model_number' | 'installation_date' | 'equipment_type'>[];
+};
 
 export interface CreateInteractionInput {
   customer_id: string;
@@ -452,7 +458,7 @@ export class CRMService {
     state?: string;
     postal_code?: string;
     lead_source?: string;
-  }): Promise<any> {
+  }): Promise<Tables<'customers'>> {
     // Map postal_code to zip_code for database
     const { postal_code, ...rest } = input;
     const { data, error } = await supabase
@@ -474,7 +480,7 @@ export class CRMService {
   /**
    * Get flagged sales opportunities
    */
-  static async getSalesOpportunities(): Promise<any[]> {
+  static async getSalesOpportunities(): Promise<Views<'vw_sales_opportunities'>[]> {
     const { data, error } = await supabase
       .from('vw_sales_opportunities')
       .select('*')
@@ -487,7 +493,7 @@ export class CRMService {
   /**
    * Get prospects (customers flagged for replacement)
    */
-  static async getProspects(): Promise<any[]> {
+  static async getProspects(): Promise<CustomerWithEquipment[]> {
     const { data, error } = await supabase
       .from('customers')
       .select(`
@@ -499,6 +505,6 @@ export class CRMService {
       .order('name');
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as unknown as CustomerWithEquipment[];
   }
 }

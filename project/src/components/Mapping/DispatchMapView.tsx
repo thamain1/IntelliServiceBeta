@@ -154,9 +154,9 @@ export function DispatchMapView() {
       } else {
         alert(`Route optimization failed: ${result.error}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[DispatchMapView] Route optimization error:', error);
-      alert(`Route optimization failed: ${error.message}`);
+      alert(`Route optimization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setOptimizing(false);
     }

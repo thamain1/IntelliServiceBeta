@@ -204,6 +204,7 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
         loadReconciliationsData();
         break;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialView]);
 
   const loadGLAccounts = async () => {
@@ -224,14 +225,15 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
 
   const loadJournalEntries = async () => {
     try {
+      // journal_entries is a view, not a table - cast through unknown
       const { data, error } = await (supabase
-        .from('journal_entries') as any)
+        .from('journal_entries') as unknown as ReturnType<typeof supabase.from<'gl_entries'>>)
         .select('*, profiles(full_name)')
         .order('entry_date', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setJournalEntries(data || []);
+      setJournalEntries((data as unknown as JournalEntry[]) || []);
     } catch (error) {
       console.error('Error loading journal entries:', error);
     }
@@ -337,8 +339,8 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
   const loadARData = async () => {
     setArLoading(true);
     try {
-      const { data, error } = await (supabase
-        .from('invoices') as any)
+      const { data, error } = await supabase
+        .from('invoices')
         .select('id, invoice_number, customer_id, issue_date, due_date, balance_due, customers(name)')
         .gt('balance_due', 0)
         .neq('status', 'cancelled')
@@ -347,7 +349,16 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
       if (error) throw error;
 
       const today = new Date();
-      const invoices: ARInvoice[] = (data || []).map((inv: any) => {
+      type InvoiceWithCustomer = {
+        id: string;
+        invoice_number: string;
+        customer_id: string;
+        issue_date: string;
+        due_date: string;
+        balance_due: number;
+        customers: { name: string } | null;
+      };
+      const invoices: ARInvoice[] = ((data || []) as unknown as InvoiceWithCustomer[]).map((inv) => {
         const dueDate = new Date(inv.due_date);
         const diffTime = today.getTime() - dueDate.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -503,7 +514,7 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
         description: accountFormData.description,
         is_active: accountFormData.is_active,
         normal_balance: accountFormData.account_type === 'asset' || accountFormData.account_type === 'expense' ? 'debit' as const : 'credit' as const,
-      }] as any);
+      }]);
 
       if (error) throw error;
 
@@ -532,7 +543,7 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
     }]);
   };
 
-  const updateJournalLine = (index: number, field: string, value: any) => {
+  const updateJournalLine = (index: number, field: string, value: string | number) => {
     const updated = [...journalLines];
     updated[index] = { ...updated[index], [field]: value };
     setJournalLines(updated);
@@ -590,7 +601,7 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
 
       const { error: entriesError } = await supabase
         .from('gl_entries')
-        .insert(entriesToInsert as any);
+        .insert(entriesToInsert);
 
       if (entriesError) throw entriesError;
 
@@ -727,10 +738,10 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
 
       <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-thin">
         <nav className="flex space-x-8 min-w-max px-1">
-          {['dashboard', 'accounts', 'journal', 'reports', 'reconciliations', 'settings'].map((tab) => (
+          {(['dashboard', 'accounts', 'journal', 'reports', 'reconciliations', 'settings'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab)}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? 'border-blue-600 text-blue-600'
@@ -1985,7 +1996,7 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
                   <select
                     required
                     value={accountFormData.account_type}
-                    onChange={(e) => setAccountFormData({ ...accountFormData, account_type: e.target.value as any })}
+                    onChange={(e) => setAccountFormData({ ...accountFormData, account_type: e.target.value as 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' })}
                     className="input"
                   >
                     <option value="asset">Asset</option>
@@ -2275,9 +2286,9 @@ function StartReconciliationModal({
       });
 
       onCreate(reconciliation.id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error starting reconciliation:', error);
-      alert('Failed to start reconciliation: ' + error.message);
+      alert('Failed to start reconciliation: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }

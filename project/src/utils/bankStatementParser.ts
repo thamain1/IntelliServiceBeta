@@ -398,7 +398,7 @@ function parseDate(value: string): string {
   }
 
   // Try MM/DD/YYYY
-  const parts = value.split(/[\/\-]/);
+  const parts = value.split(/[/-]/);
   if (parts.length === 3) {
     const [a, b, c] = parts;
     // Guess MM/DD/YYYY or DD/MM/YYYY based on values

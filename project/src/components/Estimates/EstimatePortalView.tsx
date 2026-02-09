@@ -8,8 +8,8 @@ interface EstimatePortalProps {
 export function EstimatePortalView({ token }: EstimatePortalProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [estimate, setEstimate] = useState<any>(null);
-  const [linkInfo, setLinkInfo] = useState<any>(null);
+  const [estimate, setEstimate] = useState<Record<string, unknown> | null>(null);
+  const [linkInfo, setLinkInfo] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDecisionForm, setShowDecisionForm] = useState(false);
   const [decisionType, setDecisionType] = useState<'accepted' | 'rejected'>('accepted');
@@ -19,6 +19,7 @@ export function EstimatePortalView({ token }: EstimatePortalProps) {
 
   useEffect(() => {
     loadEstimate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const loadEstimate = async () => {
@@ -211,18 +212,18 @@ export function EstimatePortalView({ token }: EstimatePortalProps) {
                 Line Items
               </h3>
               <div className="space-y-2">
-                {estimate?.line_items?.map((item: any, index: number) => (
+                {(estimate?.line_items as Array<Record<string, unknown>> | undefined)?.map((item: Record<string, unknown>, index: number) => (
                   <div
-                    key={item.id || index}
+                    key={(item.id as string) || index}
                     className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700"
                   >
                     <div className="flex-1">
                       <div className="font-medium text-gray-900 dark:text-white">
-                        {item.description}
+                        {item.description as string}
                       </div>
                       {item.quantity && item.unit_price && (
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {item.quantity} × ${Number(item.unit_price).toFixed(2)}
+                          {item.quantity as number} × ${Number(item.unit_price).toFixed(2)}
                         </div>
                       )}
                     </div>
