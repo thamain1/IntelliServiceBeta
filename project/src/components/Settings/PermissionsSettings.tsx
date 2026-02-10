@@ -16,12 +16,13 @@ interface RolePermission {
 }
 
 const PERMISSIONS: Permission[] = [
-  // Tickets
+  // Tickets (Field Service)
   { id: 'tickets.view', name: 'View Tickets', description: 'View all tickets', category: 'Tickets' },
   { id: 'tickets.create', name: 'Create Tickets', description: 'Create new tickets', category: 'Tickets' },
   { id: 'tickets.edit', name: 'Edit Tickets', description: 'Edit existing tickets', category: 'Tickets' },
   { id: 'tickets.delete', name: 'Delete Tickets', description: 'Delete tickets', category: 'Tickets' },
   { id: 'tickets.assign', name: 'Assign Tickets', description: 'Assign tickets to technicians', category: 'Tickets' },
+  { id: 'tickets.approve', name: 'Approve Tickets', description: 'Approve completed work', category: 'Tickets' },
 
   // Customers
   { id: 'customers.view', name: 'View Customers', description: 'View customer information', category: 'Customers' },
@@ -76,14 +77,35 @@ const DEFAULT_ROLE_PERMISSIONS: RolePermission[] = [
       'inventory.view', 'inventory.adjust', 'inventory.order',
       'dispatch.view', 'dispatch.schedule',
       'reports.view', 'reports.export',
+      'settings.users',
     ],
   },
   {
     role: 'dispatcher',
     permissions: [
       'tickets.view', 'tickets.create', 'tickets.edit', 'tickets.assign',
-      'customers.view',
+      'customers.view', 'customers.create',
       'dispatch.view', 'dispatch.schedule',
+      'inventory.view',
+      'reports.view',
+    ],
+  },
+  {
+    role: 'accounting',
+    permissions: [
+      'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.send', 'invoices.void',
+      'accounting.view', 'accounting.journal', 'accounting.reconcile', 'accounting.reports',
+      'customers.view',
+      'reports.view', 'reports.export',
+    ],
+  },
+  {
+    role: 'lead_tech',
+    permissions: [
+      'tickets.view', 'tickets.create', 'tickets.edit', 'tickets.assign', 'tickets.approve',
+      'customers.view',
+      'inventory.view', 'inventory.adjust',
+      'dispatch.view',
       'reports.view',
     ],
   },
@@ -101,8 +123,9 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
   office_manager: 'Office Manager',
   dispatcher: 'Dispatcher',
+  accounting: 'Accounting',
+  lead_tech: 'Lead Tech / Field Supervisor',
   technician: 'Technician',
-  material_handler: 'Material Handler',
 };
 
 export function PermissionsSettings() {
