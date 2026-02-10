@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Shield, Users, Check, X, Save, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Permission {
   id: string;
@@ -101,9 +102,12 @@ const ROLE_LABELS: Record<string, string> = {
   office_manager: 'Office Manager',
   dispatcher: 'Dispatcher',
   technician: 'Technician',
+  material_handler: 'Material Handler',
 };
 
 export function PermissionsSettings() {
+  const { profile, loading: authLoading } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>(DEFAULT_ROLE_PERMISSIONS);
   const [selectedRole, setSelectedRole] = useState<string>('technician');
   const [loading, setLoading] = useState(true);
@@ -170,9 +174,6 @@ export function PermissionsSettings() {
   };
 
   const togglePermission = (role: string, permissionId: string) => {
-    // Don't allow modifying admin permissions
-    if (role === 'admin') return;
-
     setRolePermissions((prev) =>
       prev.map((rp) => {
         if (rp.role !== role) return rp;
@@ -232,8 +233,14 @@ export function PermissionsSettings() {
           <div>
             <h3 className="font-medium text-blue-900 dark:text-blue-100">About Role Permissions</h3>
             <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              Configure what each role can access in the system. Administrators have full access and cannot be modified.
+              Configure what each role can access in the system. Only administrators can modify permissions.
               Changes apply to all users with the selected role.
+            </p>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+              Your role: <span className="font-semibold">{profile?.role || 'Loading...'}</span>
+              {!isAdmin && !authLoading && (
+                <span className="ml-2 text-amber-600 dark:text-amber-400">(Admin access required to edit)</span>
+              )}
             </p>
           </div>
         </div>
@@ -273,8 +280,9 @@ export function PermissionsSettings() {
             </h2>
           </div>
           {selectedRole === 'admin' && (
-            <span className="text-sm text-gray-500 dark:text-gray-400 italic">
-              Administrator permissions cannot be modified
+            <span className="text-sm text-amber-600 dark:text-amber-400 italic font-medium flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              Modifying Administrator permissions may affect system stability
             </span>
           )}
         </div>
@@ -301,12 +309,12 @@ export function PermissionsSettings() {
                     </div>
                     <button
                       onClick={() => togglePermission(selectedRole, permission.id)}
-                      disabled={selectedRole === 'admin'}
+                      disabled={authLoading || !isAdmin}
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
                         hasPermission(selectedRole, permission.id)
                           ? 'bg-green-600 text-white'
                           : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
-                      } ${selectedRole === 'admin' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'}`}
+                      } ${(authLoading || !isAdmin) ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'}`}
                     >
                       {hasPermission(selectedRole, permission.id) ? (
                         <Check className="w-4 h-4" />
@@ -346,7 +354,7 @@ export function PermissionsSettings() {
               {categories.map((category) => (
                 <>
                   <tr key={`cat-${category}`} className="bg-gray-100 dark:bg-gray-700">
-                    <td colSpan={5} className="py-2 px-4 font-semibold text-gray-900 dark:text-white">
+                    <td colSpan={6} className="py-2 px-4 font-semibold text-gray-900 dark:text-white">
                       {category}
                     </td>
                   </tr>
