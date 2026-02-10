@@ -110,9 +110,6 @@ function AppContent() {
         return <EstimatesViewContainer />;
       case 'dispatch':
         return <DispatchView />;
-      case 'tracking':
-      case 'mapping':
-        return <MappingView />;
       case 'dispatch-map':
         return <DispatchMapView />;
       case 'parts':
