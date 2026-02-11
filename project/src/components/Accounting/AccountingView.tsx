@@ -226,9 +226,10 @@ export function AccountingView({ initialView = 'dashboard' }: AccountingViewProp
   const loadJournalEntries = async () => {
     try {
       // journal_entries is a view, not a table - cast through unknown
+      // Note: profiles join removed as view doesn't have FK relationship
       const { data, error } = await (supabase
         .from('journal_entries') as unknown as ReturnType<typeof supabase.from<'gl_entries'>>)
-        .select('*, profiles(full_name)')
+        .select('*')
         .order('entry_date', { ascending: false })
         .limit(50);
 
