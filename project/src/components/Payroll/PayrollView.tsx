@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Plus, DollarSign, Users, CheckCircle, AlertCircle, X, Download, FileText } from 'lucide-react';
+import { Plus, DollarSign, Users, AlertCircle, Download, FileText, Settings, BookOpen } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { PayrollService } from '../../services/PayrollService';
+import { PayrollStatsCards } from './PayrollStatsCards';
+import { PayrollRunsTable } from './PayrollRunsTable';
+import { PayrollDetailsTable } from './PayrollDetailsTable';
+import { NewPayPeriodModal } from './NewPayPeriodModal';
+import { NewDeductionModal } from './NewDeductionModal';
 
 type PayrollRun = {
   id: string;
@@ -14,6 +20,7 @@ type PayrollRun = {
   total_net_pay: number;
   employee_count: number;
   created_at: string;
+  gl_posted?: boolean;
 };
 
 type PayrollDetail = {
@@ -40,21 +47,27 @@ type Deduction = {
   is_active: boolean;
 };
 
-type Employee = {
-  id: string;
-  full_name: string;
-  role: string;
-  hourly_rate?: number;
-};
+type TabType = 'periods' | 'employees' | 'deductions' | 'reports' | 'pay-rates' | 'stubs' | 'time-cost';
 
-type EmployeeHoursAccumulator = Record<string, { regular_hours: number; overtime_hours: number }>;
+interface PayrollViewProps {
+  initialView?: 'runs' | 'time-cost' | 'stubs' | 'pay-rates';
+}
 
-export function PayrollView() {
-  const [activeTab, setActiveTab] = useState<'periods' | 'employees' | 'deductions' | 'reports'>('periods');
+export function PayrollView({ initialView = 'runs' }: PayrollViewProps) {
+  const getInitialTab = (): TabType => {
+    switch (initialView) {
+      case 'time-cost': return 'time-cost';
+      case 'stubs': return 'stubs';
+      case 'pay-rates': return 'pay-rates';
+      default: return 'periods';
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [payrollDetails, setPayrollDetails] = useState<PayrollDetail[]>([]);
   const [deductions, setDeductions] = useState<Deduction[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; full_name: string; email: string; role: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [showDeductionModal, setShowDeductionModal] = useState(false);
@@ -88,7 +101,7 @@ export function PayrollView() {
         .order('period_start_date', { ascending: false });
 
       if (error) throw error;
-      setPayrollRuns((data as PayrollRun[]) || []);
+      setPayrollRuns(data || []);
     } catch (error) {
       console.error('Error loading payroll runs:', error);
     } finally {
@@ -105,7 +118,7 @@ export function PayrollView() {
         .order('profiles(full_name)', { ascending: true });
 
       if (error) throw error;
-      setPayrollDetails((data as unknown as PayrollDetail[]) || []);
+      setPayrollDetails(data || []);
     } catch (error) {
       console.error('Error loading payroll details:', error);
     }
@@ -119,7 +132,7 @@ export function PayrollView() {
         .order('deduction_name', { ascending: true });
 
       if (error) throw error;
-      setDeductions((data as Deduction[]) || []);
+      setDeductions(data || []);
     } catch (error) {
       console.error('Error loading deductions:', error);
     }
@@ -193,7 +206,7 @@ export function PayrollView() {
 
       if (timeError) throw timeError;
 
-      const employeeHours = timeLogs?.reduce((acc: EmployeeHoursAccumulator, log) => {
+      const employeeHours = timeLogs?.reduce((acc: Record<string, { regular_hours: number; overtime_hours: number }>, log) => {
         if (!acc[log.user_id]) {
           acc[log.user_id] = {
             regular_hours: 0,
@@ -221,43 +234,33 @@ export function PayrollView() {
           overtime_hours: 0,
         };
 
-        const hourlyRate = 25;
-        const overtimeRate = hourlyRate * 1.5;
-        const regularPay = hours.regular_hours * hourlyRate;
-        const overtimePay = hours.overtime_hours * overtimeRate;
-        const grossPay = regularPay + overtimePay;
-
-        const totalDeductionsAmt = deductions
-          .filter(d => d.is_active)
-          .reduce((sum, ded) => {
-            if (ded.calculation_method === 'percentage') {
-              return sum + (grossPay * ded.default_amount / 100);
-            }
-            return sum + ded.default_amount;
-          }, 0);
-
-        const netPay = grossPay - totalDeductionsAmt;
-
         if (hours.regular_hours > 0 || hours.overtime_hours > 0) {
+          // Use PayrollService to calculate pay with actual employee rates
+          const calculation = await PayrollService.calculatePayForEmployee(
+            employee.id,
+            hours,
+            run.period_start_date
+          );
+
           const { error: detailError } = await supabase
             .from('payroll_details')
             .insert([{
               payroll_run_id: runId,
               user_id: employee.id,
-              regular_hours: hours.regular_hours,
-              overtime_hours: hours.overtime_hours,
-              regular_pay: regularPay,
-              overtime_pay: overtimePay,
-              gross_pay: grossPay,
-              total_deductions: totalDeductionsAmt,
-              net_pay: netPay,
+              regular_hours: calculation.regular_hours,
+              overtime_hours: calculation.overtime_hours,
+              regular_pay: calculation.regular_pay,
+              overtime_pay: calculation.overtime_pay,
+              gross_pay: calculation.gross_pay,
+              total_deductions: calculation.total_deductions,
+              net_pay: calculation.net_pay,
             }]);
 
           if (detailError) console.error('Error creating payroll detail:', detailError);
 
-          totalGrossPay += grossPay;
-          totalDeductions += totalDeductionsAmt;
-          totalNetPay += netPay;
+          totalGrossPay += calculation.gross_pay;
+          totalDeductions += calculation.total_deductions;
+          totalNetPay += calculation.net_pay;
           employeeCount++;
         }
       }
@@ -331,23 +334,6 @@ export function PayrollView() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'badge-gray';
-      case 'processing':
-        return 'badge-yellow';
-      case 'approved':
-        return 'badge-blue';
-      case 'paid':
-        return 'badge-green';
-      case 'cancelled':
-        return 'badge-red';
-      default:
-        return 'badge-gray';
-    }
-  };
-
   const getDeductionTypeColor = (type: string) => {
     switch (type) {
       case 'tax':
@@ -405,17 +391,25 @@ export function PayrollView() {
 
       <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-thin">
         <nav className="flex space-x-8 min-w-max px-1">
-          {['periods', 'employees', 'deductions', 'reports'].map((tab) => (
+          {[
+            { key: 'periods', label: 'Pay Periods' },
+            { key: 'employees', label: 'Employees' },
+            { key: 'pay-rates', label: 'Pay Rates' },
+            { key: 'deductions', label: 'Deductions' },
+            { key: 'stubs', label: 'Pay Stubs' },
+            { key: 'time-cost', label: 'Time & Cost' },
+            { key: 'reports', label: 'Reports' },
+          ].map((tab) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab as 'periods' | 'employees' | 'deductions' | 'reports')}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as TabType)}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                activeTab === tab
+                activeTab === tab.key
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab.label}
             </button>
           ))}
         </nav>
@@ -424,269 +418,29 @@ export function PayrollView() {
       {activeTab === 'periods' && (
         <div className="space-y-6">
           {selectedRun && payrollDetails.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="card p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Employees</p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                      {totalEmployees}
-                    </p>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 text-blue-600 p-3 rounded-lg">
-                    <Users className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="card p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Gross Pay</p>
-                    <p className="text-3xl font-bold text-green-600 mt-2">
-                      ${totalGrossPay.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="bg-green-100 dark:bg-green-900/20 text-green-600 p-3 rounded-lg">
-                    <DollarSign className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="card p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Deductions</p>
-                    <p className="text-3xl font-bold text-red-600 mt-2">
-                      ${totalDeductions.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="bg-red-100 dark:bg-red-900/20 text-red-600 p-3 rounded-lg">
-                    <AlertCircle className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="card p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Net Pay</p>
-                    <p className="text-3xl font-bold text-blue-600 mt-2">
-                      ${totalNetPay.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 text-blue-600 p-3 rounded-lg">
-                    <CheckCircle className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <PayrollStatsCards
+              totalEmployees={totalEmployees}
+              totalGrossPay={totalGrossPay}
+              totalDeductions={totalDeductions}
+              totalNetPay={totalNetPay}
+            />
           )}
 
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Run Number
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Period
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Pay Date
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Employees
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Net Pay
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {payrollRuns.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No payroll runs found. Click "New Pay Period" to create one.
-                      </td>
-                    </tr>
-                  ) : (
-                    payrollRuns.map((run) => (
-                      <tr key={run.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-6 py-4">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {run.run_number}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-gray-900 dark:text-white">
-                            {new Date(run.period_start_date).toLocaleDateString()} - {new Date(run.period_end_date).toLocaleDateString()}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-gray-900 dark:text-white">
-                            {new Date(run.pay_date).toLocaleDateString()}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-gray-900 dark:text-white">
-                            {run.employee_count}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            ${run.total_net_pay.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`badge ${getStatusColor(run.status)}`}>
-                            {run.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button
-                              onClick={() => {
-                                setSelectedRun(run);
-                                loadPayrollDetails(run.id);
-                              }}
-                              className="btn btn-outline p-2"
-                              title="View Details"
-                            >
-                              <FileText className="w-4 h-4" />
-                            </button>
-                            {run.status === 'draft' && (
-                              <button
-                                onClick={() => processPayroll(run.id)}
-                                className="btn btn-primary p-2"
-                                title="Process Payroll"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PayrollRunsTable
+            runs={payrollRuns}
+            onViewDetails={(run) => {
+              setSelectedRun(run);
+              loadPayrollDetails(run.id);
+            }}
+            onProcessPayroll={processPayroll}
+          />
 
           {selectedRun && payrollDetails.length > 0 && (
-            <div className="card overflow-hidden">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                      Payroll Details - {selectedRun.run_number}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Pay Date: {new Date(selectedRun.pay_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedRun(null)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Employee
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Regular Hours
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        OT Hours
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Gross Pay
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Deductions
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Net Pay
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {payrollDetails.map((detail) => (
-                      <tr key={detail.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-6 py-4">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {detail.profiles?.full_name || 'Unknown'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-gray-900 dark:text-white">
-                            {detail.regular_hours.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-gray-900 dark:text-white">
-                            {detail.overtime_hours.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="font-medium text-green-600">
-                            ${detail.gross_pay.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="font-medium text-red-600">
-                            ${detail.total_deductions.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="font-medium text-blue-600">
-                            ${detail.net_pay.toFixed(2)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">
-                        Totals
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
-                        {payrollDetails.reduce((sum, d) => sum + d.regular_hours, 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
-                        {payrollDetails.reduce((sum, d) => sum + d.overtime_hours, 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-green-600">
-                        ${totalGrossPay.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-red-600">
-                        ${totalDeductions.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-blue-600">
-                        ${totalNetPay.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
+            <PayrollDetailsTable
+              run={selectedRun}
+              details={payrollDetails}
+              onClose={() => setSelectedRun(null)}
+            />
           )}
         </div>
       )}
@@ -784,6 +538,120 @@ export function PayrollView() {
         </div>
       )}
 
+      {activeTab === 'pay-rates' && (
+        <div className="space-y-6">
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Employee Pay Rates</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Configure hourly rates, overtime rates, and compensation settings for each employee
+                </p>
+              </div>
+              <button className="btn btn-primary flex items-center space-x-2">
+                <Plus className="w-5 h-5" />
+                <span>Add Pay Rate</span>
+              </button>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <Settings className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    Employee pay rates are stored in the <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">employee_pay_rates</code> table.
+                    This feature allows you to set individual rates that will be used when generating payroll.
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+                    Employees without configured rates will use the default rate of $25/hour.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 text-center py-8 text-gray-500 dark:text-gray-400">
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>Pay rates configuration coming soon</p>
+              <p className="text-sm">Use the EmployeePayRatesView component for full functionality</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'stubs' && (
+        <div className="space-y-6">
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Pay Stubs</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  View and download individual pay stubs for employees
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <select className="input w-48">
+                  <option value="">All Employees</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>{emp.full_name}</option>
+                  ))}
+                </select>
+                <button className="btn btn-outline flex items-center space-x-2">
+                  <Download className="w-4 h-4" />
+                  <span>Export</span>
+                </button>
+              </div>
+            </div>
+            <div className="mt-6 text-center py-8 text-gray-500 dark:text-gray-400">
+              <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>Pay stubs viewer coming soon</p>
+              <p className="text-sm">Use the PayStubsView component for full functionality</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'time-cost' && (
+        <div className="space-y-6">
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Time & Cost Analysis</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Analyze labor costs and time tracking data
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <input type="date" className="input" />
+                <span className="text-gray-500 self-center">to</span>
+                <input type="date" className="input" />
+                <button className="btn btn-primary">Apply</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <p className="text-sm text-blue-600 dark:text-blue-400">Total Hours</p>
+                <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">--</p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                <p className="text-sm text-green-600 dark:text-green-400">Labor Cost</p>
+                <p className="text-2xl font-bold text-green-800 dark:text-green-200">$--</p>
+              </div>
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                <p className="text-sm text-purple-600 dark:text-purple-400">Overtime Hours</p>
+                <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">--</p>
+              </div>
+              <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+                <p className="text-sm text-orange-600 dark:text-orange-400">Avg Hourly Rate</p>
+                <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">$--</p>
+              </div>
+            </div>
+            <div className="mt-6 text-center py-8 text-gray-500 dark:text-gray-400">
+              <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>Time & cost analysis coming soon</p>
+              <p className="text-sm">Full reporting capabilities will be available in the reports section</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'reports' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="card p-6 hover:shadow-lg transition-shadow cursor-pointer">
@@ -848,184 +716,21 @@ export function PayrollView() {
         </div>
       )}
 
-      {showPeriodModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">New Payroll Period</h2>
-              <button
-                onClick={() => setShowPeriodModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      <NewPayPeriodModal
+        isOpen={showPeriodModal}
+        onClose={() => setShowPeriodModal(false)}
+        onSubmit={handleCreatePeriod}
+        formData={periodFormData}
+        onChange={setPeriodFormData}
+      />
 
-            <form onSubmit={handleCreatePeriod} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Start Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={periodFormData.period_start_date}
-                    onChange={(e) => setPeriodFormData({ ...periodFormData, period_start_date: e.target.value })}
-                    className="input"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    End Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={periodFormData.period_end_date}
-                    onChange={(e) => setPeriodFormData({ ...periodFormData, period_end_date: e.target.value })}
-                    className="input"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Pay Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={periodFormData.pay_date}
-                    onChange={(e) => setPeriodFormData({ ...periodFormData, pay_date: e.target.value })}
-                    className="input"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowPeriodModal(false)}
-                  className="btn btn-outline flex-1"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary flex-1">
-                  Create Period
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showDeductionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">New Deduction</h2>
-              <button
-                onClick={() => setShowDeductionModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateDeduction} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Deduction Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={deductionFormData.deduction_name}
-                    onChange={(e) => setDeductionFormData({ ...deductionFormData, deduction_name: e.target.value })}
-                    className="input"
-                    placeholder="e.g., Federal Income Tax"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Deduction Type *
-                  </label>
-                  <select
-                    required
-                    value={deductionFormData.deduction_type}
-                    onChange={(e) => setDeductionFormData({ ...deductionFormData, deduction_type: e.target.value as 'tax' | 'insurance' | 'retirement' | 'garnishment' | 'other' })}
-                    className="input"
-                  >
-                    <option value="tax">Tax</option>
-                    <option value="insurance">Insurance</option>
-                    <option value="retirement">Retirement</option>
-                    <option value="garnishment">Garnishment</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Calculation Method *
-                  </label>
-                  <select
-                    required
-                    value={deductionFormData.calculation_method}
-                    onChange={(e) => setDeductionFormData({ ...deductionFormData, calculation_method: e.target.value as 'percentage' | 'fixed_amount' })}
-                    className="input"
-                  >
-                    <option value="percentage">Percentage</option>
-                    <option value="fixed_amount">Fixed Amount</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {deductionFormData.calculation_method === 'percentage' ? 'Percentage (%)' : 'Fixed Amount ($)'} *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value={deductionFormData.default_amount}
-                    onChange={(e) => setDeductionFormData({ ...deductionFormData, default_amount: parseFloat(e.target.value) || 0 })}
-                    className="input"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={deductionFormData.is_pre_tax}
-                      onChange={(e) => setDeductionFormData({ ...deductionFormData, is_pre_tax: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Pre-Tax Deduction</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowDeductionModal(false)}
-                  className="btn btn-outline flex-1"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary flex-1">
-                  Create Deduction
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <NewDeductionModal
+        isOpen={showDeductionModal}
+        onClose={() => setShowDeductionModal(false)}
+        onSubmit={handleCreateDeduction}
+        formData={deductionFormData}
+        onChange={setDeductionFormData}
+      />
     </div>
   );
 }

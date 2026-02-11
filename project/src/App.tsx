@@ -179,9 +179,13 @@ function AppContent() {
         return <AccountingView initialView="reconciliations" />;
       case 'payroll':
       case 'payroll-runs':
+        return <PayrollView initialView="runs" />;
       case 'payroll-time-cost':
+        return <PayrollView initialView="time-cost" />;
       case 'payroll-stubs':
-        return <PayrollView />;
+        return <PayrollView initialView="stubs" />;
+      case 'payroll-pay-rates':
+        return <PayrollView initialView="pay-rates" />;
       case 'reports':
       case 'reports-job-cost':
         return <ReportsView />;
