@@ -166,13 +166,41 @@ export function VehiclesSettings() {
   };
 
   const handleDeleteVehicle = async (vehicle: VehicleWithTechnician) => {
-    const confirmMessage = vehicle.profiles?.full_name
-      ? `Are you sure you want to delete "${vehicle.name}" (assigned to ${vehicle.profiles.full_name})? This will also remove any inventory tracking for this location.`
-      : `Are you sure you want to delete "${vehicle.name}"? This will also remove any inventory tracking for this location.`;
-
-    if (!confirm(confirmMessage)) return;
-
     try {
+      // Check if vehicle has inventory
+      const { data: inventory, error: invError } = await supabase
+        .from('part_inventory')
+        .select('id, quantity')
+        .eq('stock_location_id', vehicle.id)
+        .gt('quantity', 0);
+
+      if (invError) throw invError;
+
+      if (inventory && inventory.length > 0) {
+        const totalItems = inventory.reduce((sum, item) => sum + item.quantity, 0);
+        const shouldDeactivate = confirm(
+          `"${vehicle.name}" has ${totalItems} parts in inventory across ${inventory.length} line items.\n\n` +
+          `You cannot delete a vehicle with inventory. Would you like to DEACTIVATE it instead?\n\n` +
+          `Click OK to deactivate, or Cancel to go back.`
+        );
+
+        if (shouldDeactivate) {
+          await supabase
+            .from('stock_locations')
+            .update({ is_active: false })
+            .eq('id', vehicle.id);
+          loadVehicles();
+        }
+        return;
+      }
+
+      // No inventory - confirm deletion
+      const confirmMessage = vehicle.profiles?.full_name
+        ? `Are you sure you want to delete "${vehicle.name}" (assigned to ${vehicle.profiles.full_name})?`
+        : `Are you sure you want to delete "${vehicle.name}"?`;
+
+      if (!confirm(confirmMessage)) return;
+
       // Clear technician's default_vehicle_id if this was their vehicle
       if (vehicle.technician_id) {
         await supabase
@@ -181,6 +209,12 @@ export function VehiclesSettings() {
           .eq('id', vehicle.technician_id)
           .eq('default_vehicle_id', vehicle.id);
       }
+
+      // Delete any zero-quantity inventory records
+      await supabase
+        .from('part_inventory')
+        .delete()
+        .eq('stock_location_id', vehicle.id);
 
       // Delete the stock location
       const { error } = await supabase
@@ -192,7 +226,7 @@ export function VehiclesSettings() {
       loadVehicles();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
-      alert('Failed to delete vehicle. It may have inventory or other records associated with it.');
+      alert('Failed to delete vehicle. Please try deactivating it instead.');
     }
   };
 
