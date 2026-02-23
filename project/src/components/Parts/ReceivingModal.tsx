@@ -162,9 +162,42 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
           return;
         }
 
-        // Record inventory movement for non-serialized parts (triggers inventory update)
+        // Update inventory for non-serialized parts using upsert
         if (!part.is_serialized && receivingItem.quantity_received > 0) {
-          const { error: movementError } = await supabase
+          // First check if inventory record exists
+          const { data: existingInventory } = await supabase
+            .from('part_inventory')
+            .select('id, quantity')
+            .eq('part_id', line.part_id)
+            .eq('stock_location_id', receivingItem.stock_location_id)
+            .single();
+
+          if (existingInventory) {
+            // Update existing record
+            const { error: updateError } = await supabase
+              .from('part_inventory')
+              .update({
+                quantity: existingInventory.quantity + receivingItem.quantity_received,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingInventory.id);
+
+            if (updateError) throw updateError;
+          } else {
+            // Insert new record
+            const { error: insertError } = await supabase
+              .from('part_inventory')
+              .insert({
+                part_id: line.part_id,
+                stock_location_id: receivingItem.stock_location_id,
+                quantity: receivingItem.quantity_received,
+              });
+
+            if (insertError) throw insertError;
+          }
+
+          // Also record the movement for audit trail
+          await supabase
             .from('inventory_movements')
             .insert({
               part_id: line.part_id,
@@ -176,8 +209,6 @@ export function ReceivingModal({ purchaseOrderId, onClose, onComplete }: Receivi
               reference_id: purchaseOrderId,
               notes: `Received from PO ${po?.po_number}`,
             });
-
-          if (movementError) throw movementError;
         }
 
         if (part.is_serialized) {
