@@ -70,9 +70,11 @@ interface PurchaseOrdersViewProps {
   itemType?: ItemType;
   linkedRequest?: LinkedPartsRequest;
   onClearLinkedRequest?: () => void;
+  initialSelectedPO?: string | null;
+  onClearSelectedPO?: () => void;
 }
 
-export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLinkedRequest }: PurchaseOrdersViewProps) {
+export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLinkedRequest, initialSelectedPO, onClearSelectedPO }: PurchaseOrdersViewProps) {
   const isTool = itemType === 'tool';
   const itemLabel = isTool ? 'Tool' : 'Part';
   const itemLabelPlural = isTool ? 'Tools' : 'Parts';
@@ -126,6 +128,18 @@ export function PurchaseOrdersView({ itemType = 'part', linkedRequest, onClearLi
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedRequest, parts]);
+
+  // Auto-open receiving modal when initialSelectedPO is provided
+  useEffect(() => {
+    if (initialSelectedPO && !loading) {
+      setSelectedPO(initialSelectedPO);
+      // Clear the selection after opening
+      if (onClearSelectedPO) {
+        onClearSelectedPO();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedPO, loading]);
 
   const loadData = async () => {
     try {

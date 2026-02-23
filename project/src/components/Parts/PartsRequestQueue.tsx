@@ -56,9 +56,10 @@ interface ProcurementMetrics {
 interface PartsRequestQueueProps {
   onCreatePO?: (request: PartsRequest) => void;
   onViewTicket?: (ticketId: string) => void;
+  onViewPO?: (poId: string) => void;
 }
 
-export function PartsRequestQueue({ onCreatePO, onViewTicket }: PartsRequestQueueProps) {
+export function PartsRequestQueue({ onCreatePO, onViewTicket, onViewPO }: PartsRequestQueueProps) {
   const [requests, setRequests] = useState<PartsRequest[]>([]);
   const [metrics, setMetrics] = useState<ProcurementMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -407,12 +408,9 @@ export function PartsRequestQueue({ onCreatePO, onViewTicket }: PartsRequestQueu
                           <span>Create Purchase Order</span>
                         </button>
                       )}
-                      {request.request_status === 'ordered' && request.po_number && (
+                      {request.request_status === 'ordered' && request.po_id && (
                         <button
-                          onClick={() => {
-                            // Navigate to PO or open receiving
-                            alert(`View PO ${request.po_number}`);
-                          }}
+                          onClick={() => onViewPO && onViewPO(request.po_id!)}
                           className="btn btn-outline py-2 px-4 text-sm flex items-center space-x-2"
                         >
                           <FileText className="w-4 h-4" />
