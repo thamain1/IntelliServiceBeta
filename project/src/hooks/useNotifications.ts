@@ -90,7 +90,7 @@ export function useNotifications(
           table: 'notifications',
         },
         (payload) => {
-          const newNotification = payload.new as any;
+          const newNotification = payload.new as Record<string, unknown>;
           // Check if this notification is for the current user or is a broadcast
           if (newNotification.user_id === userId || newNotification.user_id === null) {
             setNotifications((prev) => [

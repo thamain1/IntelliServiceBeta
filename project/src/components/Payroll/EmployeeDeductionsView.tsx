@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Plus, Edit2, X, Users, DollarSign, Percent, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { PayrollService } from '../../services/PayrollService';
@@ -33,17 +33,7 @@ export function EmployeeDeductionsView() {
     is_active: true,
   });
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedEmployee) {
-      loadEmployeeDeductions(selectedEmployee);
-    }
-  }, [selectedEmployee]);
-
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     setLoading(true);
     try {
       const [employeesData, deductionsData] = await Promise.all([
@@ -61,7 +51,17 @@ export function EmployeeDeductionsView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  useEffect(() => {
+    if (selectedEmployee) {
+      loadEmployeeDeductions(selectedEmployee);
+    }
+  }, [selectedEmployee]);
 
   const loadEmployees = async () => {
     const { data, error } = await supabase

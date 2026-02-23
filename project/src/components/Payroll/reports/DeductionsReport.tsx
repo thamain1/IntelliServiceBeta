@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Download, Calendar, AlertCircle, DollarSign, PieChart } from 'lucide-react';
 import { PayrollService } from '../../../services/PayrollService';
 import { ExportService, ExportData, ExportFormat } from '../../../services/ExportService';
@@ -22,11 +22,7 @@ export function DeductionsReport() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [viewMode, setViewMode] = useState<'type' | 'employee'>('type');
 
-  useEffect(() => {
-    loadReport();
-  }, [startDate, endDate]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     try {
       const data = await PayrollService.getDeductionsReport(startDate, endDate);
@@ -36,7 +32,11 @@ export function DeductionsReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   const handleExport = (format: ExportFormat) => {
     if (!deductionsData) return;

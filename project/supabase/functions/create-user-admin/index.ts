@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Failed to create user");
     }
 
-    const profileData: any = {
+    const profileData: Record<string, unknown> = {
       id: authData.user.id,
       email,
       full_name: fullName,
@@ -150,11 +150,12 @@ Deno.serve(async (req: Request) => {
         },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error:", error);
-    const statusCode = error.message?.includes("Unauthorized") || error.message?.includes("Invalid or expired") ? 403 : 400;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const statusCode = errorMessage.includes("Unauthorized") || errorMessage.includes("Invalid or expired") ? 403 : 400;
     return new Response(
-      JSON.stringify({ success: false, error: error.message || String(error) }),
+      JSON.stringify({ success: false, error: errorMessage }),
       {
         status: statusCode,
         headers: {

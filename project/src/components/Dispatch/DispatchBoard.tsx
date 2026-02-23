@@ -124,10 +124,6 @@ export function DispatchBoard({ selectedDate, onDateChange, onViewModeChange }: 
     onDateChange(newDate);
   };
 
-  const goToToday = () => {
-    onDateChange(new Date());
-  };
-
   const handleViewModeAction = (action: ViewAction) => {
     if (action === 'today') {
       onDateChange(new Date());

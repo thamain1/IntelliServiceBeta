@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Download, Calendar, Users, DollarSign, Clock } from 'lucide-react';
 import { PayrollService } from '../../../services/PayrollService';
 import { ExportService, ExportData, ExportFormat } from '../../../services/ExportService';
@@ -26,11 +26,7 @@ export function EmployeeEarningsReport() {
   const [sortBy, setSortBy] = useState<'name' | 'gross' | 'hours'>('gross');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  useEffect(() => {
-    loadReport();
-  }, [startDate, endDate]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     try {
       const data = await PayrollService.getEmployeeEarningsReport(startDate, endDate);
@@ -40,7 +36,11 @@ export function EmployeeEarningsReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   const handleExport = (format: ExportFormat) => {
     const exportData: ExportData = {

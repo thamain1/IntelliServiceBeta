@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Download, FileText, Calendar, DollarSign, Users, Clock } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Download, FileText, Calendar } from 'lucide-react';
 import { PayrollService, PayrollSummary } from '../../../services/PayrollService';
 import { ExportService, ExportData, ExportFormat } from '../../../services/ExportService';
 
@@ -13,11 +13,7 @@ export function PayrollSummaryReport() {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    loadReport();
-  }, [startDate, endDate]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     try {
       const data = await PayrollService.getPayrollSummaryReport(startDate, endDate);
@@ -27,7 +23,11 @@ export function PayrollSummaryReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   const handleExport = (format: ExportFormat) => {
     const exportData: ExportData = {

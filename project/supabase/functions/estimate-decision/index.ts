@@ -134,7 +134,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Update estimate status and date
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       status: decision,
     };
 

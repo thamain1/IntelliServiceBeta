@@ -212,7 +212,7 @@ export function TechnicianTicketView() {
 
   // Co-Pilot: Fetch equipment intelligence when ticket selected
   // Check both customer_id and customers.id (nested relation)
-  const customerId = selectedTicket?.customer_id || (selectedTicket?.customers as any)?.id;
+  const customerId = selectedTicket?.customer_id || (selectedTicket?.customers as { id?: string } | null | undefined)?.id;
   const ticketId = selectedTicket?.id;
 
   // Track previous values to detect changes
@@ -286,6 +286,7 @@ export function TechnicianTicketView() {
       }
     };
     loadEquipmentIntel();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId, customerId]);
 
   useEffect(() => {

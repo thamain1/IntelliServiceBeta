@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Plus, Edit2, History, X, DollarSign, Clock, Users, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { PayrollService, EmployeePayRateWithProfile } from '../../services/PayrollService';
@@ -25,7 +25,6 @@ export function EmployeePayRatesView() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [rateHistory, setRateHistory] = useState<EmployeePayRate[]>([]);
   const [editingRate, setEditingRate] = useState<EmployeePayRate | null>(null);
 
@@ -42,11 +41,7 @@ export function EmployeePayRatesView() {
     per_diem_rate: null,
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [ratesData, employeesData] = await Promise.all([
@@ -60,7 +55,11 @@ export function EmployeePayRatesView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const loadEmployees = async () => {
     const { data, error } = await supabase
@@ -74,7 +73,6 @@ export function EmployeePayRatesView() {
   };
 
   const loadRateHistory = async (userId: string) => {
-    setSelectedEmployee(userId);
     const history = await PayrollService.getPayRateHistory(userId);
     setRateHistory(history);
     setShowHistoryModal(true);

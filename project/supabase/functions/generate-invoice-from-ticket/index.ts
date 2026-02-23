@@ -148,7 +148,7 @@ Deno.serve(async (req: Request) => {
 
     // Calculate totals
     let subtotal = 0;
-    const lineItems: any[] = [];
+    const lineItems: Record<string, unknown>[] = [];
 
     // Add labor line items
     if (timeLogs && timeLogs.length > 0) {

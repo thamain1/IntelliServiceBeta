@@ -11,7 +11,7 @@ export interface ParsedBankLine {
   checkNumber?: string;
   referenceNumber?: string;
   transactionType?: 'debit' | 'credit';
-  rawData?: Record<string, any>;
+  rawData?: Record<string, unknown>;
 }
 
 export interface ParseResult {
@@ -153,14 +153,14 @@ export function parseCSV(content: string, mapping: CSVColumnMapping): ParseResul
         };
 
         result.lines.push(parsed);
-      } catch (err: any) {
-        result.errors.push(`Row ${i + 1}: ${err.message}`);
+      } catch (err: unknown) {
+        result.errors.push(`Row ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
     result.success = result.lines.length > 0;
-  } catch (err: any) {
-    result.errors.push('Failed to parse CSV: ' + err.message);
+  } catch (err: unknown) {
+    result.errors.push('Failed to parse CSV: ' + err instanceof Error ? err.message : String(err));
   }
 
   return result;
@@ -230,14 +230,14 @@ export function parseOFX(content: string): ParseResult {
         };
 
         result.lines.push(parsed);
-      } catch (err: any) {
-        result.errors.push('Failed to parse transaction: ' + err.message);
+      } catch (err: unknown) {
+        result.errors.push('Failed to parse transaction: ' + err instanceof Error ? err.message : String(err));
       }
     }
 
     result.success = result.lines.length > 0;
-  } catch (err: any) {
-    result.errors.push('Failed to parse OFX: ' + err.message);
+  } catch (err: unknown) {
+    result.errors.push('Failed to parse OFX: ' + err instanceof Error ? err.message : String(err));
   }
 
   return result;

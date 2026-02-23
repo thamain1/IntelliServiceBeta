@@ -37,8 +37,8 @@ export async function loadGoogleMaps(): Promise<typeof google> {
     })();
 
     return googleMapsPromise;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Google Maps] Failed to load Google Maps:', error);
-    throw new Error(`Google Maps initialization failed: ${error.message}`);
+    throw new Error(`Google Maps initialization failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

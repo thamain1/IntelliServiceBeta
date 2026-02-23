@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Download, FileText, Calendar, DollarSign, Building2 } from 'lucide-react';
 import { PayrollService } from '../../../services/PayrollService';
 import { ExportService, ExportData, ExportFormat } from '../../../services/ExportService';
@@ -23,11 +23,7 @@ export function TaxReport() {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    loadReport();
-  }, [startDate, endDate]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     try {
       const data = await PayrollService.getTaxReport(startDate, endDate);
@@ -37,7 +33,11 @@ export function TaxReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   const handleExport = (format: ExportFormat) => {
     if (!taxData) return;

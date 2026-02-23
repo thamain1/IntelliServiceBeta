@@ -142,10 +142,6 @@ export function DispatchView() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
   const handleViewModeAction = (action: ViewAction) => {
     if (action === 'today') {
       setCurrentDate(new Date());

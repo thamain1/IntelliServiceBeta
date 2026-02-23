@@ -111,7 +111,6 @@ Deno.serve(async (req: Request) => {
     const effectiveCustomerId = customer_id || estimate.customer_id;
     let toEmail: string | null = null;
     let toPhone: string | null = null;
-    let contactName: string | null = null;
 
     if (contact_id) {
       const { data: contact } = await supabase
@@ -123,14 +122,12 @@ Deno.serve(async (req: Request) => {
       if (contact) {
         toEmail = contact.email;
         toPhone = contact.phone || contact.mobile;
-        contactName = contact.name;
       }
     }
 
     if (!toEmail && !toPhone) {
       toEmail = estimate.customers.email;
       toPhone = estimate.customers.phone;
-      contactName = estimate.customers.name;
     }
 
     if (send_email && !toEmail) {
@@ -198,28 +195,11 @@ Deno.serve(async (req: Request) => {
     // The frontend will construct the full URL from the token
     const portalUrl = `/estimate-portal/${plainToken}`;
 
-    const deliveryResults: any[] = [];
+    const deliveryResults: { channel: string; status: string; to: string }[] = [];
 
     if (send_email && toEmail) {
       try {
         const emailSubject = `Estimate ${estimate.estimate_number} from ${estimate.customers.name || 'Your Service Provider'}`;
-        const emailBody = `
-Hello ${contactName || 'Valued Customer'},
-
-Please review your estimate ${estimate.estimate_number}.
-
-Estimate Details:
-- Job: ${estimate.job_title}
-- Amount: $${estimate.total_amount?.toFixed(2) || '0.00'}
-${estimate.expiration_date ? `- Valid Until: ${estimate.expiration_date}` : ''}
-
-View and respond to your estimate:
-${portalUrl}
-
-${estimate.notes ? `\nNotes:\n${estimate.notes}` : ''}
-
-Thank you for your business!
-        `;
 
         console.log('Email would be sent to:', toEmail);
         console.log('Subject:', emailSubject);
@@ -336,7 +316,7 @@ Thank you for your business!
 
     const shouldUpdateStatus = estimate.status === 'draft';
     if (shouldUpdateStatus || !estimate.sent_date) {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (!estimate.sent_date) {
         updateData.sent_date = new Date().toISOString();
       }

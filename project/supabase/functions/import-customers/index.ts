@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+serve(async (_req) => {
   try {
     const connectionString = Deno.env.get('SUPABASE_DB_URL')
     if (!connectionString) throw new Error('Missing SUPABASE_DB_URL')

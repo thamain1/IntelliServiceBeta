@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
     });
 
     // Use the Admin API to update the user's password
-    const { data: updateData, error: updateError } = await adminClient.auth.admin.updateUserById(
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(
       userId,
       { password: newPassword }
     );

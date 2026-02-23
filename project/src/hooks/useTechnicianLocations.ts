@@ -3,6 +3,17 @@ import { supabase } from '../lib/supabase';
 import type { TechnicianMapData } from '../types/map.types';
 import { getTechnicianStatus } from '../types/map.types';
 
+interface TicketQueryRow {
+  id: string;
+  ticket_number: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  scheduled_date: string | null;
+  estimated_duration: number | null;
+  customer?: { name?: string; address?: string | null; latitude?: number | null; longitude?: number | null } | null;
+}
+
 interface UseTechnicianLocationsOptions {
   pollingInterval?: number; // ms, default 30000
   enableRealtime?: boolean; // default true
@@ -68,7 +79,7 @@ export function useTechnicianLocations(
 
           const status = getTechnicianStatus(locationData?.timestamp ?? undefined);
 
-          const activeTickets = (ticketData || []).map((ticket: any) => ({
+          const activeTickets = (ticketData || []).map((ticket: TicketQueryRow) => ({
             id: ticket.id,
             ticket_number: ticket.ticket_number,
             title: ticket.title,
@@ -96,9 +107,9 @@ export function useTechnicianLocations(
 
       setTechnicians(techsWithData);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading technician locations:', err);
-      setError(err.message || 'Failed to load technician locations');
+      setError(err instanceof Error ? err.message : 'Failed to load technician locations');
     } finally {
       setLoading(false);
     }

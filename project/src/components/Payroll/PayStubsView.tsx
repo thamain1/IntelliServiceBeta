@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Download, FileText, Calendar, Users, Eye, X, DollarSign } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Download, FileText, Calendar, Users, Eye, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { PayrollService, PayStub, YTDTotals } from '../../services/PayrollService';
 import { PayStubPDF } from './PayStubPDF';
@@ -22,29 +22,24 @@ export function PayStubsView() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('role', ['technician', 'dispatcher'])
+          .order('full_name', { ascending: true });
+
+        if (error) throw error;
+        setEmployees(data || []);
+      } catch (error) {
+        console.error('Error loading employees:', error);
+      }
+    };
     loadInitialData();
   }, []);
 
-  useEffect(() => {
-    loadPayStubs();
-  }, [selectedEmployee, startDate, endDate]);
-
-  const loadInitialData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('role', ['technician', 'dispatcher'])
-        .order('full_name', { ascending: true });
-
-      if (error) throw error;
-      setEmployees(data || []);
-    } catch (error) {
-      console.error('Error loading employees:', error);
-    }
-  };
-
-  const loadPayStubs = async () => {
+  const loadPayStubs = useCallback(async () => {
     setLoading(true);
     try {
       const stubs = await PayrollService.getPayStubs({
@@ -58,7 +53,11 @@ export function PayStubsView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedEmployee, startDate, endDate]);
+
+  useEffect(() => {
+    loadPayStubs();
+  }, [loadPayStubs]);
 
   const handleViewStub = async (stub: PayStub) => {
     setSelectedStub(stub);

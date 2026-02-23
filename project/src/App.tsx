@@ -9,7 +9,6 @@ import { SidebarNew } from './components/Layout/SidebarNew';
 const DashboardView = lazy(() => import('./components/Dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
 const TicketsView = lazy(() => import('./components/Tickets/TicketsView').then(m => ({ default: m.TicketsView })));
 const DispatchView = lazy(() => import('./components/Dispatch/DispatchView').then(m => ({ default: m.DispatchView })));
-const MappingView = lazy(() => import('./components/Mapping/MappingView').then(m => ({ default: m.MappingView })));
 const DispatchMapView = lazy(() => import('./components/Mapping/DispatchMapView').then(m => ({ default: m.DispatchMapView })));
 const PartsManagementView = lazy(() => import('./components/Parts/PartsManagementView').then(m => ({ default: m.PartsManagementView })));
 const EquipmentView = lazy(() => import('./components/Equipment/EquipmentView').then(m => ({ default: m.EquipmentView })));
