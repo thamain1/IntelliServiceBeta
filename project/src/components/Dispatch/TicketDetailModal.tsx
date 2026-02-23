@@ -104,6 +104,27 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
   const [customerContracts, setCustomerContracts] = useState<ServiceContract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
 
+  // Load customer contracts - must be defined before loadTicket which uses it
+  const loadCustomerContracts = useCallback(async (customerId: string) => {
+    setLoadingContracts(true);
+    try {
+      const { data, error } = await supabase
+        .from('service_contracts')
+        .select('*')
+        .eq('customer_id', customerId)
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      setCustomerContracts(data || []);
+    } catch (error) {
+      console.error('Error loading customer contracts:', error);
+      setCustomerContracts([]);
+    } finally {
+      setLoadingContracts(false);
+    }
+  }, []);
+
   const loadTicket = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -187,26 +208,6 @@ export function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate }: Ticke
       console.error('Error loading technicians:', error);
     }
   };
-
-  const loadCustomerContracts = useCallback(async (customerId: string) => {
-    setLoadingContracts(true);
-    try {
-      const { data, error } = await supabase
-        .from('service_contracts')
-        .select('*')
-        .eq('customer_id', customerId)
-        .eq('status', 'active')
-        .order('name');
-
-      if (error) throw error;
-      setCustomerContracts(data || []);
-    } catch (error) {
-      console.error('Error loading customer contracts:', error);
-      setCustomerContracts([]);
-    } finally {
-      setLoadingContracts(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (isOpen && ticketId) {
