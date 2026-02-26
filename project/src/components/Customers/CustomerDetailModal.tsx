@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X, Mail, Phone, MapPin, Edit, Trash2, Package, Wrench, FileText, Calendar, DollarSign, TrendingUp, AlertCircle, Image, Camera, Plus } from 'lucide-react';
+import { X, Mail, Phone, MapPin, Edit, Trash2, Package, Wrench, FileText, Calendar, DollarSign, TrendingUp, AlertCircle, Image, Camera, Plus, ExternalLink } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { useAuth } from '../../contexts/AuthContext';
+import { TicketDetailModal } from '../Dispatch/TicketDetailModal';
 import {
   getCustomerFinancialSummary,
   formatCurrency,
@@ -51,6 +52,7 @@ export function CustomerDetailModal({ customer, onClose, onEdit, onDelete }: Cus
   const [customerPhotoCaption, setCustomerPhotoCaption] = useState('');
   const [uploadingCustomerPhoto, setUploadingCustomerPhoto] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -271,6 +273,7 @@ export function CustomerDetailModal({ customer, onClose, onEdit, onDelete }: Cus
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0 md:p-4">
       <div className="bg-white dark:bg-gray-800 md:rounded-xl shadow-2xl max-w-4xl w-full h-full md:h-auto md:max-h-[90vh] overflow-y-auto flex flex-col">
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
@@ -599,7 +602,11 @@ export function CustomerDetailModal({ customer, onClose, onEdit, onDelete }: Cus
               ) : (
                 <div className="space-y-3">
                   {tickets.map((ticket) => (
-                    <div key={ticket.id} className="card p-4">
+                    <div
+                      key={ticket.id}
+                      className="card p-4 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all"
+                      onClick={() => setSelectedTicketId(ticket.id)}
+                    >
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <div className="flex items-center space-x-2">
@@ -619,6 +626,7 @@ export function CustomerDetailModal({ customer, onClose, onEdit, onDelete }: Cus
                           <span className={getPriorityBadge(ticket.priority ?? '')}>
                             {ticket.priority ?? ''}
                           </span>
+                          <ExternalLink className="w-3.5 h-3.5 text-blue-400 mt-1" />
                         </div>
                       </div>
 
@@ -989,5 +997,15 @@ export function CustomerDetailModal({ customer, onClose, onEdit, onDelete }: Cus
         )}
       </div>
     </div>
+
+    {selectedTicketId && (
+      <TicketDetailModal
+        isOpen={true}
+        ticketId={selectedTicketId}
+        onClose={() => setSelectedTicketId(null)}
+        onUpdate={loadServiceHistory}
+      />
+    )}
+    </>
   );
 }
