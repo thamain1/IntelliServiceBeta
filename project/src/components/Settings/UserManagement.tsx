@@ -78,7 +78,7 @@ export function UserManagement() {
           fullName: formData.full_name,
           role: formData.role,
           phone: formData.phone || null,
-          laborCostPerHour: formData.role === 'technician' ? formData.labor_cost_per_hour : null,
+          laborCostPerHour: (formData.role === 'technician' || formData.role === 'lead_tech') ? formData.labor_cost_per_hour : null,
         }),
       });
 
@@ -223,16 +223,24 @@ export function UserManagement() {
     }
   };
 
+  const ROLE_LABELS: Record<string, string> = {
+    admin: 'Administrator',
+    office_manager: 'Office Manager',
+    dispatcher: 'Dispatcher',
+    accounting: 'Accounting',
+    lead_tech: 'Lead Tech / Field Supervisor',
+    technician: 'Technician',
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'badge badge-red';
-      case 'dispatcher':
-        return 'badge badge-blue';
-      case 'technician':
-        return 'badge badge-green';
-      default:
-        return 'badge badge-gray';
+      case 'admin':         return 'badge badge-red';
+      case 'office_manager': return 'badge badge-purple';
+      case 'dispatcher':    return 'badge badge-blue';
+      case 'accounting':    return 'badge badge-yellow';
+      case 'lead_tech':     return 'badge badge-orange';
+      case 'technician':    return 'badge badge-green';
+      default:              return 'badge badge-gray';
     }
   };
 
@@ -312,7 +320,7 @@ export function UserManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={getRoleBadgeColor(user.role)}>
-                      {user.role}
+                      {ROLE_LABELS[user.role] ?? user.role}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -330,7 +338,7 @@ export function UserManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    {user.role === 'technician' && (
+                    {(user.role === 'technician' || user.role === 'lead_tech') && (
                       <div className="flex items-center space-x-2">
                         <DollarSign className="w-4 h-4 text-gray-400" />
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
@@ -338,7 +346,7 @@ export function UserManagement() {
                         </span>
                       </div>
                     )}
-                    {user.role !== 'technician' && (
+                    {user.role !== 'technician' && user.role !== 'lead_tech' && (
                       <span className="text-sm text-gray-400 dark:text-gray-500">N/A</span>
                     )}
                   </td>
@@ -472,13 +480,16 @@ export function UserManagement() {
                   onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value as UserRole })}
                   className="input"
                 >
-                  <option value="technician">Technician</option>
+                  <option value="admin">Administrator</option>
+                  <option value="office_manager">Office Manager</option>
                   <option value="dispatcher">Dispatcher</option>
-                  <option value="admin">Admin</option>
+                  <option value="accounting">Accounting</option>
+                  <option value="lead_tech">Lead Tech / Field Supervisor</option>
+                  <option value="technician">Technician</option>
                 </select>
               </div>
 
-              {editFormData.role === 'technician' && (
+              {(editFormData.role === 'technician' || editFormData.role === 'lead_tech') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Labor Cost per Hour *
@@ -621,13 +632,16 @@ export function UserManagement() {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
                   className="input"
                 >
-                  <option value="technician">Technician</option>
+                  <option value="admin">Administrator</option>
+                  <option value="office_manager">Office Manager</option>
                   <option value="dispatcher">Dispatcher</option>
-                  <option value="admin">Admin</option>
+                  <option value="accounting">Accounting</option>
+                  <option value="lead_tech">Lead Tech / Field Supervisor</option>
+                  <option value="technician">Technician</option>
                 </select>
               </div>
 
-              {formData.role === 'technician' && (
+              {(formData.role === 'technician' || formData.role === 'lead_tech') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Labor Cost per Hour *

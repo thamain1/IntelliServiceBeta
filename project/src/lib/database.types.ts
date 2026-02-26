@@ -23946,7 +23946,10 @@ export type Database = {
       time_log_type: "regular" | "overtime" | "travel" | "on_site" | "break"
       user_role:
         | "admin"
+        | "office_manager"
         | "dispatcher"
+        | "accounting"
+        | "lead_tech"
         | "technician"
         | "material_handler"
         | "supervisor"
@@ -24445,7 +24448,10 @@ export const Constants = {
       time_log_type: ["regular", "overtime", "travel", "on_site", "break"],
       user_role: [
         "admin",
+        "office_manager",
         "dispatcher",
+        "accounting",
+        "lead_tech",
         "technician",
         "material_handler",
         "supervisor",
